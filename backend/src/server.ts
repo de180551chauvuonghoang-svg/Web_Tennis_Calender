@@ -99,6 +99,27 @@ app.get('/api/leads', async (req: Request, res: Response) => {
 });
 
 /**
+ * 2b. Lấy danh sách huấn luyện viên (Coaches) từ Supabase
+ */
+app.get('/api/coaches', async (req: Request, res: Response) => {
+  try {
+    const { data: coaches, error } = await supabase
+      .from('coaches')
+      .select('*')
+      .order('name', { ascending: true });
+
+    if (error) {
+      console.error('[Supabase Coaches Error]', error);
+      return res.status(500).json({ error: 'Lỗi khi lấy danh sách HLV từ cơ sở dữ liệu.' });
+    }
+
+    return res.json(coaches);
+  } catch (err) {
+    return res.status(500).json({ error: 'Lỗi hệ thống.' });
+  }
+});
+
+/**
  * 3. Cập nhật trạng thái/thông tin lead
  */
 app.put('/api/leads/:id', async (req: Request, res: Response) => {

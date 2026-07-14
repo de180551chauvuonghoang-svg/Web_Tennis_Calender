@@ -43,6 +43,7 @@ export default function App() {
 
   // Admin States
   const [leads, setLeads] = useState<Lead[]>([]);
+  const [coaches, setCoaches] = useState<{ id: string; name: string; email: string }[]>([]);
   const [isLoadingLeads, setIsLoadingLeads] = useState(false);
   const [ocrLoading, setOcrLoading] = useState(false);
   const [ocrResult, setOcrResult] = useState<{ phone: string; platform: string } | null>(null);
@@ -51,7 +52,7 @@ export default function App() {
   // Scheduling Modal/Section States
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [schedulerForm, setSchedulerForm] = useState({
-    coachName: 'Huấn luyện viên Jayce',
+    coachName: 'Hoang Jayce',
     platform: 'Zalo',
     startTime: '',
     endTime: '',
@@ -62,12 +63,28 @@ export default function App() {
   // File Upload Ref
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Fetch leads on admin view
+  // Fetch leads & coaches on admin view
   useEffect(() => {
     if (view === 'admin') {
       fetchLeads();
+      fetchCoaches();
     }
   }, [view]);
+
+  const fetchCoaches = async () => {
+    try {
+      const response = await fetch(`${API_BASE}/coaches`);
+      if (response.ok) {
+        const data = await response.json();
+        setCoaches(data);
+        if (data.length > 0) {
+          setSchedulerForm(prev => ({ ...prev, coachName: data[0].name }));
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching coaches:', error);
+    }
+  };
 
   const fetchLeads = async () => {
     setIsLoadingLeads(true);
@@ -830,10 +847,13 @@ export default function App() {
                           onChange={e => setSchedulerForm({ ...schedulerForm, coachName: e.target.value })}
                           style={{ backgroundColor: 'rgba(0,0,0,0.3)', border: '1px solid var(--border-color)', borderRadius: '6px', padding: '8px 10px', color: '#fff', fontSize: '13px', outline: 'none' }}
                         >
-                          <option value="Huấn luyện viên Jayce">Châu Vương Hoàng (Jayce)</option>
-                          <option value="Huấn luyện viên Hào Anh">HLV Hào Anh</option>
-                          <option value="Huấn luyện viên Minh">HLV Minh Nguyễn</option>
-                          <option value="Huấn luyện viên Tuấn">HLV Tuấn Anh</option>
+                          {coaches.length > 0 ? (
+                            coaches.map(c => (
+                              <option key={c.id} value={c.name}>{c.name}</option>
+                            ))
+                          ) : (
+                            <option value="Hoang Jayce">Hoang Jayce</option>
+                          )}
                         </select>
                       </div>
 

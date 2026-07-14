@@ -30,3 +30,19 @@ CREATE INDEX idx_lessons_reminder_sent ON lessons(reminder_sent);
 -- Tắt RLS để đơn giản hóa giao tiếp trực tiếp
 ALTER TABLE leads DISABLE ROW LEVEL SECURITY;
 ALTER TABLE lessons DISABLE ROW LEVEL SECURITY;
+
+-- 4. Bảng lưu trữ danh sách Huấn luyện viên / Admin (coaches)
+CREATE TABLE coaches (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    name TEXT NOT NULL,
+    email TEXT UNIQUE,
+    created_at TIMESTAMPTZ DEFAULT now()
+);
+
+ALTER TABLE coaches DISABLE ROW LEVEL SECURITY;
+
+-- Thêm tài khoản admin Hoang Jayce mẫu
+INSERT INTO coaches (name, email) 
+VALUES ('Hoang Jayce', 'hoangjayce@gmail.com')
+ON CONFLICT (email) DO NOTHING;
+
