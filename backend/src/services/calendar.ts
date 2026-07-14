@@ -87,3 +87,21 @@ export async function deleteCalendarEvent(eventId: string): Promise<void> {
     console.error('[Google Calendar] Lỗi khi xóa sự kiện:', error);
   }
 }
+
+/**
+ * Cập nhật màu sắc của một sự kiện trên Google Calendar
+ */
+export async function updateCalendarEventColor(eventId: string, colorId: string): Promise<void> {
+  try {
+    await calendar.events.patch({
+      calendarId: calendarId,
+      eventId: eventId,
+      requestBody: {
+        colorId: colorId
+      }
+    });
+    console.log(`[Google Calendar] Đã cập nhật màu sự kiện ${eventId} thành ${colorId}`);
+  } catch (error) {
+    console.error('[Google Calendar] Lỗi khi cập nhật màu sắc:', error);
+  }
+}

@@ -25,7 +25,7 @@ interface Lead {
   age: number | null;
   phone: string;
   level: string;
-  status: 'New' | 'Contacted' | 'Scheduled' | 'Cancelled';
+  status: 'New' | 'Contacted' | 'Scheduled' | 'Completed' | 'Cancelled';
   notes: string;
   created_at: string;
   lessons?: {
@@ -1205,7 +1205,7 @@ export default function App() {
                                     onChange={e => handleUpdateStatus(lead.id, e.target.value as Lead['status'])}
                                     style={{
                                       backgroundColor: 'rgba(0,0,0,0.3)',
-                                      color: lead.status === 'Scheduled' ? 'var(--success-color)' : lead.status === 'New' ? '#3b82f6' : lead.status === 'Contacted' ? '#eab308' : '#94a3b8',
+                                      color: lead.status === 'Completed' ? 'var(--success-color)' : lead.status === 'Scheduled' ? 'var(--accent-color)' : lead.status === 'New' ? '#3b82f6' : lead.status === 'Contacted' ? '#eab308' : '#94a3b8',
                                       border: '1px solid var(--border-color)',
                                       borderRadius: '6px',
                                       padding: '4px 8px',
@@ -1218,6 +1218,7 @@ export default function App() {
                                     <option value="New">Mới</option>
                                     <option value="Contacted">Đã Liên Hệ</option>
                                     <option value="Scheduled">Đã Lên Lịch</option>
+                                    <option value="Completed">Hoàn Thành</option>
                                     <option value="Cancelled">Đã Hủy</option>
                                   </select>
                                 </td>
@@ -1226,7 +1227,7 @@ export default function App() {
                                     <button 
                                       onClick={() => setSelectedLead(lead)}
                                       style={{
-                                        backgroundColor: lead.status === 'Scheduled' ? '#eab308' : 'var(--accent-color)',
+                                        backgroundColor: (lead.status === 'Scheduled' || lead.status === 'Completed') ? '#eab308' : 'var(--accent-color)',
                                         color: '#000',
                                         border: 'none',
                                         borderRadius: '6px',
@@ -1239,7 +1240,7 @@ export default function App() {
                                         gap: '4px'
                                       }}
                                     >
-                                      <CalendarIcon size={12} /> {lead.status === 'Scheduled' ? 'Sửa lịch' : 'Lên lịch'}
+                                      <CalendarIcon size={12} /> {(lead.status === 'Scheduled' || lead.status === 'Completed') ? 'Sửa lịch' : 'Lên lịch'}
                                     </button>
                                     
                                     <button 

@@ -6,7 +6,7 @@ import path from 'path';
 
 import { supabase } from './services/supabase';
 import { appendLeadToSheet } from './services/sheets';
-import { createCalendarEvent, deleteCalendarEvent } from './services/calendar';
+import { createCalendarEvent, deleteCalendarEvent, updateCalendarEventColor } from './services/calendar';
 import { sendDiscordBookingNotification } from './services/discord';
 import { performOcr } from './services/groq';
 import { startScheduler } from './scheduler';
@@ -182,6 +182,23 @@ app.put('/api/leads/:id', async (req: Request, res: Response) => {
 
     if (error) {
       return res.status(500).json({ error: 'Lỗi khi cập nhật thông tin.' });
+    }
+
+    // Nếu chuyển trạng thái thành Hoàn thành (Completed), đổi màu lịch Google sang màu xanh lá (Basil - colorId 10)
+    if (updates.status === 'Completed') {
+      try {
+        const { data: lesson } = await supabase
+          .from('lessons')
+          .select('google_event_id')
+          .eq('lead_id', id)
+          .maybeSingle();
+
+        if (lesson && lesson.google_event_id) {
+          await updateCalendarEventColor(lesson.google_event_id, '10');
+        }
+      } catch (calErr) {
+        console.error('[Calendar Color Update Fail]', calErr);
+      }
     }
 
     return res.json(lead);
