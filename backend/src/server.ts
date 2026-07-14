@@ -85,7 +85,7 @@ app.get('/api/leads', async (req: Request, res: Response) => {
   try {
     const { data: leads, error } = await supabase
       .from('leads')
-      .select('*')
+      .select('*, lessons(*)')
       .order('created_at', { ascending: false });
 
     if (error) {

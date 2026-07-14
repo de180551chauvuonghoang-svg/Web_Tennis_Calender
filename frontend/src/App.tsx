@@ -28,6 +28,13 @@ interface Lead {
   status: 'New' | 'Contacted' | 'Scheduled' | 'Cancelled';
   notes: string;
   created_at: string;
+  lessons?: {
+    id: string;
+    coach_name: string;
+    platform: string;
+    start_time: string;
+    end_time: string;
+  }[];
 }
 
 const TRANSLATIONS = {
@@ -264,6 +271,43 @@ export default function App() {
       window.removeEventListener('paste', handlePaste);
     };
   }, [view, isLoggedIn]);
+
+  // Pre-fill scheduler form when a lead is selected for scheduling/editing
+  useEffect(() => {
+    if (selectedLead) {
+      const existing = selectedLead.lessons?.[0];
+      if (existing) {
+        // Helper to format ISO to YYYY-MM-DDTHH:mm
+        const toDatetimeLocal = (isoStr: string) => {
+          const date = new Date(isoStr);
+          if (isNaN(date.getTime())) return '';
+          const tzOffset = date.getTimezoneOffset() * 60000;
+          return (new Date(date.getTime() - tzOffset)).toISOString().slice(0, 16);
+        };
+
+        // Calculate duration in minutes
+        const start = new Date(existing.start_time);
+        const end = new Date(existing.end_time);
+        const diffMins = Math.round((end.getTime() - start.getTime()) / (60 * 1000));
+
+        setSchedulerForm({
+          coachName: existing.coach_name || (coaches[0]?.name || 'Hoang Jayce'),
+          platform: existing.platform || 'Zalo',
+          startTime: toDatetimeLocal(existing.start_time),
+          duration: String(diffMins || '90'),
+        });
+      } else {
+        // Reset to default values for new booking
+        setSchedulerForm({
+          coachName: coaches[0]?.name || 'Hoang Jayce',
+          platform: 'Zalo',
+          startTime: '',
+          duration: '90',
+        });
+      }
+    }
+  }, [selectedLead, coaches]);
+
 
   const fetchLeads = async () => {
     setIsLoadingLeads(true);
@@ -1124,37 +1168,38 @@ export default function App() {
                         <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
                           <thead>
                             <tr style={{ borderBottom: '1px solid var(--border-color)', paddingBottom: '12px' }}>
-                              <th style={{ padding: '12px 10px', fontSize: '13px', color: 'var(--text-secondary)' }}>Họ tên</th>
-                              <th style={{ padding: '12px 10px', fontSize: '13px', color: 'var(--text-secondary)' }}>Tuổi</th>
-                              <th style={{ padding: '12px 10px', fontSize: '13px', color: 'var(--text-secondary)' }}>Số điện thoại</th>
-                              <th style={{ padding: '12px 10px', fontSize: '13px', color: 'var(--text-secondary)' }}>Trình độ</th>
-                              <th style={{ padding: '12px 10px', fontSize: '13px', color: 'var(--text-secondary)' }}>Ngày Đăng ký</th>
-                              <th style={{ padding: '12px 10px', fontSize: '13px', color: 'var(--text-secondary)' }}>Trạng thái</th>
-                              <th style={{ padding: '12px 10px', fontSize: '13px', color: 'var(--text-secondary)', textAlign: 'right' }}>Thao tác</th>
+                              <th style={{ padding: '12px 10px', fontSize: '13px', color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>Họ tên</th>
+                              <th style={{ padding: '12px 10px', fontSize: '13px', color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>Tuổi</th>
+                              <th style={{ padding: '12px 10px', fontSize: '13px', color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>Số điện thoại</th>
+                              <th style={{ padding: '12px 10px', fontSize: '13px', color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>Trình độ</th>
+                              <th style={{ padding: '12px 10px', fontSize: '13px', color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>Ngày Đăng ký</th>
+                              <th style={{ padding: '12px 10px', fontSize: '13px', color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>Trạng thái</th>
+                              <th style={{ padding: '12px 10px', fontSize: '13px', color: 'var(--text-secondary)', textAlign: 'right', whiteSpace: 'nowrap' }}>Thao tác</th>
                             </tr>
                           </thead>
                           <tbody>
                             {leads.map(lead => (
                               <tr key={lead.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.03)', transition: 'background 0.2s' }}>
-                                <td style={{ padding: '14px 10px', fontWeight: '600' }}>{lead.name}</td>
-                                <td style={{ padding: '14px 10px' }}>{lead.age || '—'}</td>
-                                <td style={{ padding: '14px 10px' }}>{lead.phone}</td>
-                                <td style={{ padding: '14px 10px' }}>
+                                <td style={{ padding: '14px 10px', fontWeight: '600', whiteSpace: 'nowrap' }}>{lead.name}</td>
+                                <td style={{ padding: '14px 10px', whiteSpace: 'nowrap' }}>{lead.age || '—'}</td>
+                                <td style={{ padding: '14px 10px', whiteSpace: 'nowrap' }}>{lead.phone}</td>
+                                <td style={{ padding: '14px 10px', whiteSpace: 'nowrap' }}>
                                   <span style={{
                                     fontSize: '11px',
                                     fontWeight: '700',
                                     padding: '2px 8px',
                                     borderRadius: '4px',
                                     backgroundColor: lead.level === 'Basic' ? 'rgba(194,255,20,0.1)' : lead.level === 'Intermediate' ? 'rgba(59,130,246,0.1)' : 'rgba(236,72,153,0.1)',
-                                    color: lead.level === 'Basic' ? 'var(--accent-color)' : lead.level === 'Intermediate' ? '#3b82f6' : '#ec4899'
+                                    color: lead.level === 'Basic' ? 'var(--accent-color)' : lead.level === 'Intermediate' ? '#3b82f6' : '#ec4899',
+                                    whiteSpace: 'nowrap'
                                   }}>
                                     {lead.level === 'Basic' ? 'Cơ bản' : lead.level === 'Intermediate' ? 'Trung cấp' : 'Nâng cao'}
                                   </span>
                                 </td>
-                                <td style={{ padding: '14px 10px', fontSize: '13px', color: 'var(--text-secondary)' }}>
+                                <td style={{ padding: '14px 10px', fontSize: '13px', color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>
                                   {formatDate(lead.created_at)}
                                 </td>
-                                <td style={{ padding: '14px 10px' }}>
+                                <td style={{ padding: '14px 10px', whiteSpace: 'nowrap' }}>
                                   <select 
                                     value={lead.status}
                                     onChange={e => handleUpdateStatus(lead.id, e.target.value as Lead['status'])}
@@ -1176,8 +1221,8 @@ export default function App() {
                                     <option value="Cancelled">Đã Hủy</option>
                                   </select>
                                 </td>
-                                <td style={{ padding: '14px 10px', textAlign: 'right' }}>
-                                  <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+                                <td style={{ padding: '14px 10px', textAlign: 'right', whiteSpace: 'nowrap' }}>
+                                  <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', alignItems: 'center' }}>
                                     <button 
                                       onClick={() => setSelectedLead(lead)}
                                       style={{
