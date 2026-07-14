@@ -1200,24 +1200,46 @@ export default function App() {
 
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                             <label style={{ fontSize: '12px', color: 'var(--text-secondary)', fontWeight: '600' }}>Thời gian bắt đầu</label>
-                            <input 
-                              type="datetime-local"
-                              value={schedulerForm.startTime}
-                              onChange={e => setSchedulerForm({ ...schedulerForm, startTime: e.target.value })}
-                              required
-                              style={{ backgroundColor: 'rgba(0,0,0,0.3)', border: '1px solid var(--border-color)', borderRadius: '6px', padding: '8px 10px', color: '#fff', fontSize: '13px', outline: 'none' }}
-                            />
+                            <div className="datetime-container">
+                              <input 
+                                type="datetime-local"
+                                className="datetime-input"
+                                value={schedulerForm.startTime}
+                                onChange={e => setSchedulerForm({ ...schedulerForm, startTime: e.target.value })}
+                                required
+                                onClick={(e) => {
+                                  try {
+                                    e.currentTarget.showPicker();
+                                  } catch (err) {}
+                                }}
+                                style={{ backgroundColor: 'rgba(0,0,0,0.3)', border: '1px solid var(--border-color)', borderRadius: '6px', padding: '8px 10px', color: '#fff', fontSize: '13px', outline: 'none', width: '100%' }}
+                              />
+                              <div className="datetime-icon">
+                                <CalendarIcon size={16} />
+                              </div>
+                            </div>
                           </div>
 
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                             <label style={{ fontSize: '12px', color: 'var(--text-secondary)', fontWeight: '600' }}>Thời gian kết thúc</label>
-                            <input 
-                              type="datetime-local"
-                              value={schedulerForm.endTime}
-                              onChange={e => setSchedulerForm({ ...schedulerForm, endTime: e.target.value })}
-                              required
-                              style={{ backgroundColor: 'rgba(0,0,0,0.3)', border: '1px solid var(--border-color)', borderRadius: '6px', padding: '8px 10px', color: '#fff', fontSize: '13px', outline: 'none' }}
-                            />
+                            <div className="datetime-container">
+                              <input 
+                                type="datetime-local"
+                                className="datetime-input"
+                                value={schedulerForm.endTime}
+                                onChange={e => setSchedulerForm({ ...schedulerForm, endTime: e.target.value })}
+                                required
+                                onClick={(e) => {
+                                  try {
+                                    e.currentTarget.showPicker();
+                                  } catch (err) {}
+                                }}
+                                style={{ backgroundColor: 'rgba(0,0,0,0.3)', border: '1px solid var(--border-color)', borderRadius: '6px', padding: '8px 10px', color: '#fff', fontSize: '13px', outline: 'none', width: '100%' }}
+                              />
+                              <div className="datetime-icon">
+                                <CalendarIcon size={16} />
+                              </div>
+                            </div>
                           </div>
 
                           <button 
