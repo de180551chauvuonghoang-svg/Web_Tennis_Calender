@@ -140,6 +140,7 @@ export default function App() {
   const [coaches, setCoaches] = useState<{ id: string; name: string; email: string }[]>([]);
   const [isLoadingLeads, setIsLoadingLeads] = useState(false);
   const [ocrLoading, setOcrLoading] = useState(false);
+  const [ocrPreviewUrl, setOcrPreviewUrl] = useState<string | null>(null);
   const [ocrResult, setOcrResult] = useState<{ phone: string; platform: string } | null>(null);
   const [ocrError, setOcrError] = useState('');
   
@@ -163,6 +164,31 @@ export default function App() {
       fetchLeads();
       fetchCoaches();
     }
+  }, [view, isLoggedIn]);
+
+  // Listener for Clipboard Paste (Ctrl+V) to capture screenshots
+  useEffect(() => {
+    if (view !== 'admin' || !isLoggedIn) return;
+
+    const handlePaste = (e: ClipboardEvent) => {
+      const items = e.clipboardData?.items;
+      if (!items) return;
+      
+      for (let i = 0; i < items.length; i++) {
+        if (items[i].type.indexOf('image') !== -1) {
+          const file = items[i].getAsFile();
+          if (file) {
+            processOcr(file);
+            break; // Process the first image found
+          }
+        }
+      }
+    };
+
+    window.addEventListener('paste', handlePaste);
+    return () => {
+      window.removeEventListener('paste', handlePaste);
+    };
   }, [view, isLoggedIn]);
 
   const fetchLeads = async () => {
@@ -238,6 +264,8 @@ export default function App() {
   const handleAdminLogout = () => {
     setIsLoggedIn(false);
     setCurrentCoach(null);
+    setOcrPreviewUrl(null);
+    setOcrResult(null);
     localStorage.removeItem('adminLoggedIn');
     localStorage.removeItem('adminCoach');
     setLeads([]);
@@ -277,14 +305,15 @@ export default function App() {
     }
   };
 
-  // Handle OCR Image Upload
-  const handleOcrUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
+  // Core OCR process helper
+  const processOcr = async (file: File) => {
     setOcrLoading(true);
     setOcrResult(null);
     setOcrError('');
+
+    // Generate local preview URL to display the full image
+    const preview = URL.createObjectURL(file);
+    setOcrPreviewUrl(preview);
 
     const formData = new FormData();
     formData.append('image', file);
@@ -306,8 +335,15 @@ export default function App() {
       setOcrError('Lỗi kết nối khi gửi ảnh OCR.');
     } finally {
       setOcrLoading(false);
-      if (fileInputRef.current) fileInputRef.current.value = '';
     }
+  };
+
+  // Handle OCR Image Upload from File Input
+  const handleOcrUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    processOcr(file);
+    if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
   // Handle Change Lead Status
@@ -806,7 +842,7 @@ export default function App() {
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
                     <div>
                       <h3 style={{ fontSize: '18px', fontWeight: '800' }}>📸 Công cụ Trích xuất Thông tin & Liên hệ nhanh (OCR)</h3>
-                      <p style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Tải ảnh chụp số điện thoại lên. Trợ lý AI Groq sẽ đọc ảnh và trả về link chat trực tiếp.</p>
+                      <p style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Tải ảnh chụp số điện thoại lên hoặc dán ảnh trực tiếp từ clipboard (Ctrl+V). Trợ lý AI Groq sẽ đọc ảnh và trả về link chat trực tiếp.</p>
                     </div>
                   </div>
 
@@ -823,6 +859,10 @@ export default function App() {
                         cursor: 'pointer',
                         transition: 'all 0.3s',
                         backgroundColor: 'rgba(255,255,255,0.01)',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        justifyContent: 'center',
+                        minHeight: '200px'
                       }}
                       onMouseOver={(e) => (e.currentTarget.style.borderColor = 'var(--accent-color)')}
                       onMouseOut={(e) => (e.currentTarget.style.borderColor = 'var(--border-color)')}
@@ -837,14 +877,29 @@ export default function App() {
                       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}>
                         <UploadCloud size={40} style={{ color: 'var(--text-secondary)' }} />
                         <p style={{ fontWeight: '600', fontSize: '14px' }}>
-                          {ocrLoading ? 'Đang phân tích hình ảnh bằng Groq...' : 'Tải lên ảnh chụp liên hệ'}
+                          {ocrLoading ? 'Đang phân tích hình ảnh bằng Groq...' : 'Tải lên hoặc Nhấn Ctrl+V để Dán ảnh'}
                         </p>
                         <span style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>Hỗ trợ JPG, PNG, WEBP</span>
                       </div>
                     </div>
 
                     {/* Result screen */}
-                    <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: '10px', backgroundColor: 'rgba(255,255,255,0.02)', borderRadius: '12px', border: '1px solid var(--border-color)' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'flex-start', padding: '15px', backgroundColor: 'rgba(255,255,255,0.02)', borderRadius: '12px', border: '1px solid var(--border-color)', gap: '15px' }}>
+                      
+                      {/* FULL PREVIEW OF UPLOADED/PASTED IMAGE */}
+                      {ocrPreviewUrl && (
+                        <div style={{ border: '1px solid var(--border-color)', borderRadius: '8px', overflow: 'hidden', backgroundColor: 'rgba(0,0,0,0.3)', width: '100%' }}>
+                          <span style={{ fontSize: '11px', color: 'var(--text-secondary)', padding: '5px 10px', display: 'block', borderBottom: '1px solid var(--border-color)', backgroundColor: 'rgba(255,255,255,0.02)', fontWeight: '600' }}>Hình ảnh đang quét (Đầy đủ):</span>
+                          <div style={{ padding: '5px', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+                            <img 
+                              src={ocrPreviewUrl} 
+                              alt="Uploaded Screenshot" 
+                              style={{ width: '100%', maxHeight: '350px', objectFit: 'contain', display: 'block', borderRadius: '4px' }} 
+                            />
+                          </div>
+                        </div>
+                      )}
+
                       {ocrLoading && (
                         <div style={{ textAlign: 'center', padding: '20px', color: 'var(--text-secondary)' }}>
                           <div className="spinner" style={{ margin: '0 auto 10px auto' }}></div>
@@ -853,20 +908,20 @@ export default function App() {
                       )}
 
                       {ocrError && (
-                        <div style={{ color: 'var(--error-color)', display: 'flex', alignItems: 'center', gap: '8px', padding: '15px' }}>
+                        <div style={{ color: 'var(--error-color)', display: 'flex', alignItems: 'center', gap: '8px', padding: '10px' }}>
                           <AlertCircle size={18} /> <span>{ocrError}</span>
                         </div>
                       )}
 
                       {!ocrLoading && !ocrResult && !ocrError && (
                         <div style={{ textAlign: 'center', padding: '20px', color: 'var(--text-secondary)' }}>
-                          <p>Chưa có ảnh nào được tải lên.</p>
-                          <p style={{ fontSize: '11px' }}>Hãy thử tải ảnh danh thiếp hoặc thông tin chat để OCR tự động lấy số điện thoại.</p>
+                          <p>Chưa có ảnh nào được tải lên hoặc dán từ clipboard.</p>
+                          <p style={{ fontSize: '11px', marginTop: '5px' }}>Hãy thử tải ảnh danh thiếp hoặc nhấn **Ctrl+V** để dán ảnh chụp màn hình hội thoại.</p>
                         </div>
                       )}
 
                       {ocrResult && (
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '15px', padding: '10px' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '15px', padding: '5px' }}>
                           <h4 style={{ color: 'var(--accent-color)', fontWeight: '700', fontSize: '15px' }}>⚡ KẾT QUẢ TRÍCH XUẤT OCR THÀNH CÔNG:</h4>
                           
                           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
@@ -880,55 +935,55 @@ export default function App() {
                             </div>
                           </div>
 
-                          {ocrResult.phone && (
-                            <div style={{ display: 'flex', gap: '10px', marginTop: '10px' }}>
-                              <a 
-                                href={getZaloLink(ocrResult.phone)} 
-                                target="_blank" 
-                                rel="noopener noreferrer"
-                                style={{
-                                  flex: 1,
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  justifyContent: 'center',
-                                  gap: '8px',
-                                  backgroundColor: '#0068FF',
-                                  color: '#fff',
-                                  textDecoration: 'none',
-                                  padding: '10px',
-                                  borderRadius: '8px',
-                                  fontWeight: '600',
-                                  fontSize: '13px',
-                                  transition: 'opacity 0.2s'
-                                }}
-                              >
-                                <MessageSquare size={16} /> Liên hệ Zalo
-                              </a>
-                              
-                              <a 
-                                href={getWhatsAppLink(ocrResult.phone)} 
-                                target="_blank" 
-                                rel="noopener noreferrer"
-                                style={{
-                                  flex: 1,
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  justifyContent: 'center',
-                                  gap: '8px',
-                                  backgroundColor: '#25D366',
-                                  color: '#fff',
-                                  textDecoration: 'none',
-                                  padding: '10px',
-                                  borderRadius: '8px',
-                                  fontWeight: '600',
-                                  fontSize: '13px',
-                                  transition: 'opacity 0.2s'
-                                }}
-                              >
-                                <PhoneCall size={16} /> Liên hệ WhatsApp
-                              </a>
-                            </div>
-                          )}
+                      {ocrResult.phone && (
+                        <div style={{ display: 'flex', gap: '10px', marginTop: '10px' }}>
+                          <a 
+                            href={getZaloLink(ocrResult.phone)} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            style={{
+                              flex: 1,
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              gap: '8px',
+                              backgroundColor: '#0068FF',
+                              color: '#fff',
+                              textDecoration: 'none',
+                              padding: '10px',
+                              borderRadius: '8px',
+                              fontWeight: '600',
+                              fontSize: '13px',
+                              transition: 'opacity 0.2s'
+                            }}
+                          >
+                            <MessageSquare size={16} /> Liên hệ Zalo
+                          </a>
+                          
+                          <a 
+                            href={getWhatsAppLink(ocrResult.phone)} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            style={{
+                              flex: 1,
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              gap: '8px',
+                              backgroundColor: '#25D366',
+                              color: '#fff',
+                              textDecoration: 'none',
+                              padding: '10px',
+                              borderRadius: '8px',
+                              fontWeight: '600',
+                              fontSize: '13px',
+                              transition: 'opacity 0.2s'
+                            }}
+                          >
+                            <PhoneCall size={16} /> Liên hệ WhatsApp
+                          </a>
+                        </div>
+                      )}
 
                           <button 
                             onClick={() => {
