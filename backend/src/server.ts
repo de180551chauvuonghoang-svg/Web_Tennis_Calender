@@ -120,6 +120,52 @@ app.get('/api/coaches', async (req: Request, res: Response) => {
 });
 
 /**
+ * 2c. Đăng nhập cho Admin / Huấn luyện viên
+ */
+app.post('/api/login', async (req: Request, res: Response) => {
+  try {
+    const { email, password } = req.body;
+
+    if (!email || !password) {
+      return res.status(400).json({ error: 'Vui lòng cung cấp email và mật khẩu.' });
+    }
+
+    // Kiểm tra mật khẩu quản trị
+    const adminPassword = process.env.ADMIN_PASSWORD || 'admin';
+    if (password !== adminPassword) {
+      return res.status(401).json({ error: 'Mật khẩu quản trị không chính xác.' });
+    }
+
+    // Kiểm tra email trong bảng coaches
+    const { data: coach, error } = await supabase
+      .from('coaches')
+      .select('*')
+      .eq('email', email)
+      .maybeSingle();
+
+    if (error) {
+      console.error('[Login Supabase Error]', error);
+      return res.status(500).json({ error: 'Lỗi kiểm tra cơ sở dữ liệu.' });
+    }
+
+    if (!coach) {
+      return res.status(404).json({ error: 'Email không thuộc danh sách Huấn luyện viên được cấp quyền.' });
+    }
+
+    return res.json({
+      success: true,
+      coach: {
+        id: coach.id,
+        name: coach.name,
+        email: coach.email
+      }
+    });
+  } catch (err) {
+    return res.status(500).json({ error: 'Lỗi hệ thống.' });
+  }
+});
+
+/**
  * 3. Cập nhật trạng thái/thông tin lead
  */
 app.put('/api/leads/:id', async (req: Request, res: Response) => {
