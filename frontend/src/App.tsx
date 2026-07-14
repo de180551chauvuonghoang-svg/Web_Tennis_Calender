@@ -19,6 +19,8 @@ import {
 // Backend URL
 const API_BASE = 'http://localhost:3001/api';
 
+declare const L: any;
+
 interface Lead {
   id: string;
   name: string;
@@ -184,6 +186,110 @@ function CustomSelect({ value, options, onChange }: CustomSelectProps) {
   );
 }
 
+interface MapPickerProps {
+  onLocationSelect: (lat: number, lng: number, address: string) => void;
+  defaultCourt: string;
+}
+
+function MapPicker({ onLocationSelect, defaultCourt }: MapPickerProps) {
+  const mapContainerRef = useRef<HTMLDivElement>(null);
+  const mapRef = useRef<any>(null);
+  const markerRef = useRef<any>(null);
+
+  // Predefined locations coordinates
+  const PREDEFINED_LOCATIONS: Record<string, { lat: number; lng: number }> = {
+    'Hào Anh tennis Coffee': { lat: 10.841398, lng: 106.772583 },
+    'Sân Victoria resort': { lat: 10.925624, lng: 106.792511 },
+  };
+
+  useEffect(() => {
+    if (!mapContainerRef.current) return;
+
+    // Check if L exists
+    if (typeof L === 'undefined') {
+      console.error('Leaflet library not loaded.');
+      return;
+    }
+
+    // Default coordinates (HCMC center or predefined)
+    const initialCoords = PREDEFINED_LOCATIONS[defaultCourt] || { lat: 10.762622, lng: 106.660172 };
+
+    // Initialize Map
+    const map = L.map(mapContainerRef.current, {
+      zoomControl: true,
+    }).setView([initialCoords.lat, initialCoords.lng], 15);
+    mapRef.current = map;
+
+    // Dark neon CartoDB base tiles
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+      attribution: '&copy; OpenStreetMap &copy; CartoDB',
+      subdomains: 'abcd',
+      maxZoom: 20
+    }).addTo(map);
+
+    // Custom Neon Leaflet Marker Icon
+    const neonIcon = L.divIcon({
+      className: 'custom-neon-marker',
+      html: `<div style="background-color: var(--accent-color); width: 14px; height: 14px; border: 2px solid #fff; border-radius: 50%; box-shadow: 0 0 10px var(--accent-glow);"></div>`,
+      iconSize: [14, 14],
+      iconAnchor: [7, 7]
+    });
+
+    // Initialize Marker
+    const marker = L.marker([initialCoords.lat, initialCoords.lng], { icon: neonIcon, draggable: true }).addTo(map);
+    markerRef.current = marker;
+
+    // Handle map click
+    map.on('click', (e: any) => {
+      const { lat, lng } = e.latlng;
+      marker.setLatLng([lat, lng]);
+      onLocationSelect(lat, lng, `Tọa độ: ${lat.toFixed(6)}, ${lng.toFixed(6)}`);
+    });
+
+    // Handle marker drag
+    marker.on('dragend', () => {
+      const latlng = marker.getLatLng();
+      onLocationSelect(latlng.lat, latlng.lng, `Tọa độ: ${latlng.lat.toFixed(6)}, ${latlng.lng.toFixed(6)}`);
+    });
+
+    // Trigger initial select
+    onLocationSelect(initialCoords.lat, initialCoords.lng, defaultCourt);
+
+    return () => {
+      map.remove();
+    };
+  }, []);
+
+  // Update map view when defaultCourt changes
+  useEffect(() => {
+    if (!mapRef.current || !markerRef.current) return;
+    const target = PREDEFINED_LOCATIONS[defaultCourt];
+    if (target) {
+      mapRef.current.setView([target.lat, target.lng], 16);
+      markerRef.current.setLatLng([target.lat, target.lng]);
+      onLocationSelect(target.lat, target.lng, defaultCourt);
+    }
+  }, [defaultCourt]);
+
+  return (
+    <div style={{ marginTop: '10px' }}>
+      <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginBottom: '5px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <span>📍 Di chuyển ghim hoặc click trên bản đồ để chọn tọa độ sân tập:</span>
+      </div>
+      <div 
+        ref={mapContainerRef} 
+        style={{ 
+          height: '185px', 
+          borderRadius: '8px', 
+          border: '1px solid var(--border-color)', 
+          overflow: 'hidden',
+          zIndex: 1
+        }} 
+      />
+    </div>
+  );
+}
+
 export default function App() {
   const [view, setView] = useState<'client' | 'admin'>('client');
   const [lang, setLang] = useState<'vi' | 'en'>('vi');
@@ -233,6 +339,8 @@ export default function App() {
     startTime: '',
     duration: '90',
     court: 'Hào Anh tennis Coffee',
+    lat: 10.841398,
+    lng: 106.772583,
   });
   const [isScheduling, setIsScheduling] = useState(false);
   const [scheduleSuccess, setScheduleSuccess] = useState(false);
@@ -297,6 +405,8 @@ export default function App() {
           startTime: toDatetimeLocal(existing.start_time),
           duration: String(diffMins || '90'),
           court: (existing as any).court || 'Hào Anh tennis Coffee',
+          lat: (existing as any).lat || 10.841398,
+          lng: (existing as any).lng || 106.772583,
         });
       } else {
         // Reset to default values for new booking
@@ -306,6 +416,8 @@ export default function App() {
           startTime: '',
           duration: '90',
           court: 'Hào Anh tennis Coffee',
+          lat: 10.841398,
+          lng: 106.772583,
         });
       }
     }
@@ -522,7 +634,9 @@ export default function App() {
           platform: schedulerForm.platform,
           startTime: start.toISOString(),
           endTime: end.toISOString(),
-          court: schedulerForm.court
+          court: schedulerForm.court,
+          lat: schedulerForm.lat,
+          lng: schedulerForm.lng
         })
       });
 
@@ -537,7 +651,9 @@ export default function App() {
             platform: 'Zalo',
             startTime: '',
             duration: '90',
-            court: 'Hào Anh tennis Coffee'
+            court: 'Hào Anh tennis Coffee',
+            lat: 10.841398,
+            lng: 106.772583
           });
         }, 2500);
       } else {
@@ -1481,6 +1597,18 @@ export default function App() {
                               />
                             </div>
                           )}
+
+                          <MapPicker 
+                            defaultCourt={['Hào Anh tennis Coffee', 'Sân Victoria resort'].includes(schedulerForm.court) ? schedulerForm.court : 'Hào Anh tennis Coffee'}
+                            onLocationSelect={(lat, lng, address) => {
+                              setSchedulerForm(prev => ({
+                                ...prev,
+                                lat,
+                                lng,
+                                court: ['Hào Anh tennis Coffee', 'Sân Victoria resort'].includes(prev.court) ? prev.court : prev.court || address
+                              }));
+                            }}
+                          />
 
                           <button 
                             type="submit" 

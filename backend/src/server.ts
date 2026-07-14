@@ -257,7 +257,7 @@ app.delete('/api/leads/:id', async (req: Request, res: Response) => {
  */
 app.post('/api/lessons', async (req: Request, res: Response) => {
   try {
-    const { leadId, coachName, platform, startTime, endTime, court } = req.body;
+    const { leadId, coachName, platform, startTime, endTime, court, lat, lng } = req.body;
 
     if (!leadId || !coachName || !startTime || !endTime) {
       return res.status(400).json({ error: 'Thiếu thông tin bắt buộc để lên lịch dạy.' });
@@ -293,7 +293,9 @@ app.post('/api/lessons', async (req: Request, res: Response) => {
 
     // Bản đồ tọa độ / Google Maps link của các sân tập
     let mapsLink = '';
-    if (court === 'Hào Anh tennis Coffee') {
+    if (lat && lng) {
+      mapsLink = `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
+    } else if (court === 'Hào Anh tennis Coffee') {
       mapsLink = 'https://www.google.com/maps/search/?api=1&query=Hao+Anh+Tennis+Coffee';
     } else if (court === 'Sân Victoria resort') {
       mapsLink = 'https://www.google.com/maps/search/?api=1&query=Victoria+Resort+Tennis+Court';
