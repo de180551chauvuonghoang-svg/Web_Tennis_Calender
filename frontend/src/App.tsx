@@ -232,6 +232,7 @@ export default function App() {
     platform: 'Zalo',
     startTime: '',
     duration: '90',
+    court: 'Hào Anh tennis Coffee',
   });
   const [isScheduling, setIsScheduling] = useState(false);
   const [scheduleSuccess, setScheduleSuccess] = useState(false);
@@ -290,11 +291,12 @@ export default function App() {
         const end = new Date(existing.end_time);
         const diffMins = Math.round((end.getTime() - start.getTime()) / (60 * 1000));
 
-        setSchedulerForm({
+         setSchedulerForm({
           coachName: existing.coach_name || (coaches[0]?.name || 'Hoang Jayce'),
           platform: existing.platform || 'Zalo',
           startTime: toDatetimeLocal(existing.start_time),
           duration: String(diffMins || '90'),
+          court: (existing as any).court || 'Hào Anh tennis Coffee',
         });
       } else {
         // Reset to default values for new booking
@@ -303,6 +305,7 @@ export default function App() {
           platform: 'Zalo',
           startTime: '',
           duration: '90',
+          court: 'Hào Anh tennis Coffee',
         });
       }
     }
@@ -518,7 +521,8 @@ export default function App() {
           coachName: schedulerForm.coachName,
           platform: schedulerForm.platform,
           startTime: start.toISOString(),
-          endTime: end.toISOString()
+          endTime: end.toISOString(),
+          court: schedulerForm.court
         })
       });
 
@@ -533,6 +537,7 @@ export default function App() {
             platform: 'Zalo',
             startTime: '',
             duration: '90',
+            court: 'Hào Anh tennis Coffee'
           });
         }, 2500);
       } else {
@@ -1444,6 +1449,38 @@ export default function App() {
                               ]}
                             />
                           </div>
+
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                            <label style={{ fontSize: '12px', color: 'var(--text-secondary)', fontWeight: '600' }}>Địa điểm / Sân tập</label>
+                            <CustomSelect 
+                              value={['Hào Anh tennis Coffee', 'Sân Victoria resort'].includes(schedulerForm.court) ? schedulerForm.court : 'Khác'}
+                              onChange={val => {
+                                if (val === 'Khác') {
+                                  setSchedulerForm({ ...schedulerForm, court: '' });
+                                } else {
+                                  setSchedulerForm({ ...schedulerForm, court: val });
+                                }
+                              }}
+                              options={[
+                                { value: 'Hào Anh tennis Coffee', label: 'Hào Anh tennis Coffee (Sân 1)' },
+                                { value: 'Sân Victoria resort', label: 'Sân Victoria resort (Sân 2)' },
+                                { value: 'Khác', label: 'Khác (Nhập địa chỉ...)' }
+                              ]}
+                            />
+                          </div>
+
+                          {!['Hào Anh tennis Coffee', 'Sân Victoria resort'].includes(schedulerForm.court) && (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                              <input 
+                                type="text"
+                                placeholder="Nhập tên sân tập hoặc địa chỉ cụ thể..."
+                                value={schedulerForm.court}
+                                onChange={e => setSchedulerForm({ ...schedulerForm, court: e.target.value })}
+                                required
+                                style={{ backgroundColor: 'rgba(0,0,0,0.3)', border: '1px solid var(--border-color)', borderRadius: '6px', padding: '10px 15px', color: '#fff', fontSize: '13px', outline: 'none' }}
+                              />
+                            </div>
+                          )}
 
                           <button 
                             type="submit" 

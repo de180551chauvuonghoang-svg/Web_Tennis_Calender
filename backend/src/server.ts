@@ -5,7 +5,7 @@ import dotenv from 'dotenv';
 import path from 'path';
 
 import { supabase } from './services/supabase';
-import { appendLeadToSheet } from './services/sheets';
+import { appendLeadToSheet, appendLessonToSheet } from './services/sheets';
 import { createCalendarEvent, deleteCalendarEvent, updateCalendarEventColor } from './services/calendar';
 import { sendDiscordBookingNotification } from './services/discord';
 import { performOcr } from './services/groq';
@@ -257,7 +257,7 @@ app.delete('/api/leads/:id', async (req: Request, res: Response) => {
  */
 app.post('/api/lessons', async (req: Request, res: Response) => {
   try {
-    const { leadId, coachName, platform, startTime, endTime } = req.body;
+    const { leadId, coachName, platform, startTime, endTime, court } = req.body;
 
     if (!leadId || !coachName || !startTime || !endTime) {
       return res.status(400).json({ error: 'Thiếu thông tin bắt buộc để lên lịch dạy.' });
@@ -291,6 +291,16 @@ app.post('/api/lessons', async (req: Request, res: Response) => {
         .eq('id', existingLesson.id);
     }
 
+    // Bản đồ tọa độ / Google Maps link của các sân tập
+    let mapsLink = '';
+    if (court === 'Hào Anh tennis Coffee') {
+      mapsLink = 'https://www.google.com/maps/search/?api=1&query=Hao+Anh+Tennis+Coffee';
+    } else if (court === 'Sân Victoria resort') {
+      mapsLink = 'https://www.google.com/maps/search/?api=1&query=Victoria+Resort+Tennis+Court';
+    } else if (court) {
+      mapsLink = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(court)}`;
+    }
+
     // b. Tạo lịch trên Google Calendar
     const calendarResult = await createCalendarEvent({
       studentName: lead.name,
@@ -299,30 +309,56 @@ app.post('/api/lessons', async (req: Request, res: Response) => {
       coachName,
       startTime,
       endTime,
-      notes: lead.notes
+      notes: lead.notes,
+      location: court || 'Chưa xác định'
     });
 
     // c. Lưu buổi học vào Supabase
-    const { data: lesson, error: lessonError } = await supabase
-      .from('lessons')
-      .insert([
-        {
-          lead_id: leadId,
-          coach_name: coachName,
-          platform: platform || 'Zalo',
-          start_time: startTime,
-          end_time: endTime,
-          google_event_id: calendarResult.eventId,
-          reminder_sent: false
-        }
-      ])
-      .select()
-      .single();
+    const lessonData: any = {
+      lead_id: leadId,
+      coach_name: coachName,
+      platform: platform || 'Zalo',
+      start_time: startTime,
+      end_time: endTime,
+      google_event_id: calendarResult.eventId,
+      reminder_sent: false
+    };
 
-    if (lessonError) {
-      console.error('[Lesson Db Error]', lessonError);
+    // Gán các trường bổ sung
+    lessonData.court = court || null;
+    lessonData.maps_link = mapsLink || null;
+
+    let insertResult = await supabase
+      .from('lessons')
+      .insert([lessonData])
+      .select()
+      .maybeSingle();
+
+    // Fallback nếu cột court/maps_link chưa tồn tại trong Supabase
+    if (insertResult.error) {
+      console.warn('[Supabase Insert Warning] Thử lưu buổi học không có cột court/maps_link...');
+      const fallbackData = {
+        lead_id: leadId,
+        coach_name: coachName,
+        platform: platform || 'Zalo',
+        start_time: startTime,
+        end_time: endTime,
+        google_event_id: calendarResult.eventId,
+        reminder_sent: false
+      };
+      insertResult = await supabase
+        .from('lessons')
+        .insert([fallbackData])
+        .select()
+        .maybeSingle();
+    }
+
+    if (insertResult.error || !insertResult.data) {
+      console.error('[Lesson Db Error]', insertResult.error);
       return res.status(500).json({ error: 'Lỗi khi lưu thông tin lịch dạy.' });
     }
+
+    const lesson = insertResult.data;
 
     // d. Cập nhật trạng thái lead thành 'Scheduled'
     await supabase
@@ -338,8 +374,23 @@ app.post('/api/lessons', async (req: Request, res: Response) => {
       coachName,
       startTime,
       endTime,
-      notes: lead.notes
+      notes: lead.notes,
+      court: court || 'Chưa xác định',
+      mapsLink: mapsLink
     }).catch(err => console.error('[Discord Webhook Bg Error]', err));
+
+    // f. Ghi nhận vào Google Sheets đối soát
+    const durationMins = Math.round((new Date(endTime).getTime() - new Date(startTime).getTime()) / 60000);
+    appendLessonToSheet({
+      studentName: lead.name,
+      phone: lead.phone,
+      coachName,
+      startTime,
+      duration: durationMins,
+      court: court || 'Chưa xác định',
+      mapsLink: mapsLink || 'Không có',
+      createdAt: new Date().toISOString()
+    }).catch(err => console.error('[Google Sheets Lessons Error]', err));
 
     return res.status(201).json({ lesson, htmlLink: calendarResult.htmlLink });
   } catch (err: any) {

@@ -29,6 +29,7 @@ interface EventDetails {
   startTime: string; // ISOString
   endTime: string; // ISOString
   notes?: string;
+  location?: string;
 }
 
 /**
@@ -42,6 +43,7 @@ export async function createCalendarEvent(details: EventDetails): Promise<{ even
 📞 Số điện thoại: ${details.phone}
 📘 Trình độ: ${details.level}
 👤 Huấn luyện viên phụ trách: ${details.coachName}
+📍 Địa điểm / Sân tập: ${details.location || 'Chưa xác định'}
 📝 Ghi chú lịch dạy: ${details.notes || 'Không có ghi chú'}
     `.trim();
 
@@ -50,6 +52,7 @@ export async function createCalendarEvent(details: EventDetails): Promise<{ even
       requestBody: {
         summary: summary,
         description: description,
+        location: details.location,
         start: {
           dateTime: details.startTime,
           timeZone: 'Asia/Ho_Chi_Minh',

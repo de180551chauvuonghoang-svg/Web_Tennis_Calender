@@ -54,7 +54,9 @@ export function startScheduler() {
             coachName: lesson.coach_name,
             startTime: lesson.start_time,
             endTime: lesson.end_time,
-            notes: lead.notes || ''
+            notes: lead.notes || '',
+            court: (lesson as any).court || 'Chưa xác định',
+            mapsLink: (lesson as any).maps_link || ''
           });
 
           // Cập nhật trạng thái reminder_sent = true
