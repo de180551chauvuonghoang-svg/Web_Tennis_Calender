@@ -72,3 +72,18 @@ export async function createCalendarEvent(details: EventDetails): Promise<{ even
     throw error;
   }
 }
+
+/**
+ * Xóa một sự kiện lịch tập tennis trên Google Calendar
+ */
+export async function deleteCalendarEvent(eventId: string): Promise<void> {
+  try {
+    await calendar.events.delete({
+      calendarId: calendarId,
+      eventId: eventId
+    });
+    console.log(`[Google Calendar] Đã xóa thành công sự kiện: ${eventId}`);
+  } catch (error) {
+    console.error('[Google Calendar] Lỗi khi xóa sự kiện:', error);
+  }
+}

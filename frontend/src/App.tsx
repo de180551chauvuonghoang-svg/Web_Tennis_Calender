@@ -150,7 +150,7 @@ export default function App() {
     coachName: 'Hoang Jayce',
     platform: 'Zalo',
     startTime: '',
-    endTime: '',
+    duration: '90',
   });
   const [isScheduling, setIsScheduling] = useState(false);
   const [scheduleSuccess, setScheduleSuccess] = useState(false);
@@ -389,6 +389,9 @@ export default function App() {
     setScheduleSuccess(false);
 
     try {
+      const start = new Date(schedulerForm.startTime);
+      const end = new Date(start.getTime() + parseInt(schedulerForm.duration) * 60 * 1000);
+
       const response = await fetch(`${API_BASE}/lessons`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -396,8 +399,8 @@ export default function App() {
           leadId: selectedLead.id,
           coachName: schedulerForm.coachName,
           platform: schedulerForm.platform,
-          startTime: new Date(schedulerForm.startTime).toISOString(),
-          endTime: new Date(schedulerForm.endTime).toISOString()
+          startTime: start.toISOString(),
+          endTime: end.toISOString()
         })
       });
 
@@ -411,7 +414,7 @@ export default function App() {
             coachName: coaches.length > 0 ? coaches[0].name : 'Hoang Jayce',
             platform: 'Zalo',
             startTime: '',
-            endTime: '',
+            duration: '90',
           });
         }, 2500);
       } else {
@@ -1103,9 +1106,8 @@ export default function App() {
                                   <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
                                     <button 
                                       onClick={() => setSelectedLead(lead)}
-                                      disabled={lead.status === 'Scheduled'}
                                       style={{
-                                        backgroundColor: 'var(--accent-color)',
+                                        backgroundColor: lead.status === 'Scheduled' ? '#eab308' : 'var(--accent-color)',
                                         color: '#000',
                                         border: 'none',
                                         borderRadius: '6px',
@@ -1115,11 +1117,10 @@ export default function App() {
                                         cursor: 'pointer',
                                         display: 'flex',
                                         alignItems: 'center',
-                                        gap: '4px',
-                                        opacity: lead.status === 'Scheduled' ? 0.4 : 1
+                                        gap: '4px'
                                       }}
                                     >
-                                      <CalendarIcon size={12} /> Lên lịch
+                                      <CalendarIcon size={12} /> {lead.status === 'Scheduled' ? 'Sửa lịch' : 'Lên lịch'}
                                     </button>
                                     
                                     <button 
@@ -1229,25 +1230,19 @@ export default function App() {
                           </div>
 
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                            <label style={{ fontSize: '12px', color: 'var(--text-secondary)', fontWeight: '600' }}>Thời gian kết thúc</label>
-                            <div className="datetime-container">
-                              <input 
-                                type="datetime-local"
-                                className="datetime-input"
-                                value={schedulerForm.endTime}
-                                onChange={e => setSchedulerForm({ ...schedulerForm, endTime: e.target.value })}
-                                required
-                                onClick={(e) => {
-                                  try {
-                                    e.currentTarget.showPicker();
-                                  } catch (err) {}
-                                }}
-                                style={{ backgroundColor: 'rgba(0,0,0,0.3)', border: '1px solid var(--border-color)', borderRadius: '6px', padding: '8px 10px', color: '#fff', fontSize: '13px', outline: 'none', width: '100%' }}
-                              />
-                              <div className="datetime-icon">
-                                <CalendarIcon size={16} />
-                              </div>
-                            </div>
+                            <label style={{ fontSize: '12px', color: 'var(--text-secondary)', fontWeight: '600' }}>Thời lượng tập</label>
+                            <select 
+                              value={schedulerForm.duration}
+                              onChange={e => setSchedulerForm({ ...schedulerForm, duration: e.target.value })}
+                              style={{ backgroundColor: 'rgba(0,0,0,0.3)', border: '1px solid var(--border-color)', borderRadius: '6px', padding: '8px 10px', color: '#fff', fontSize: '13px', outline: 'none' }}
+                            >
+                              <option value="30">30 phút</option>
+                              <option value="60">1 giờ</option>
+                              <option value="90">1.5 giờ (90 phút)</option>
+                              <option value="120">2 giờ</option>
+                              <option value="150">2.5 giờ</option>
+                              <option value="180">3 giờ</option>
+                            </select>
                           </div>
 
                           <button 

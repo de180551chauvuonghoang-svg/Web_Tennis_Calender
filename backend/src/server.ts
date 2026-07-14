@@ -6,7 +6,7 @@ import path from 'path';
 
 import { supabase } from './services/supabase';
 import { appendLeadToSheet } from './services/sheets';
-import { createCalendarEvent } from './services/calendar';
+import { createCalendarEvent, deleteCalendarEvent } from './services/calendar';
 import { sendDiscordBookingNotification } from './services/discord';
 import { performOcr } from './services/groq';
 import { startScheduler } from './scheduler';
@@ -232,6 +232,23 @@ app.post('/api/lessons', async (req: Request, res: Response) => {
 
     if (leadError || !lead) {
       return res.status(404).json({ error: 'Không tìm thấy học viên tương ứng.' });
+    }
+
+    // a2. Kiểm tra nếu học viên này đã có lịch tập trước đó thì xóa lịch cũ trước khi ghi nhận lịch mới
+    const { data: existingLesson } = await supabase
+      .from('lessons')
+      .select('*')
+      .eq('lead_id', leadId)
+      .maybeSingle();
+
+    if (existingLesson) {
+      if (existingLesson.google_event_id) {
+        await deleteCalendarEvent(existingLesson.google_event_id);
+      }
+      await supabase
+        .from('lessons')
+        .delete()
+        .eq('id', existingLesson.id);
     }
 
     // b. Tạo lịch trên Google Calendar
