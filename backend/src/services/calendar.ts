@@ -1,0 +1,74 @@
+import { google } from 'googleapis';
+import dotenv from 'dotenv';
+import path from 'path';
+
+dotenv.config({ path: path.resolve(__dirname, '../../.env') });
+
+const privateKey = (process.env.GOOGLE_PRIVATE_KEY || '').replace(/\\n/g, '\n');
+const clientEmail = process.env.GOOGLE_CLIENT_EMAIL || '';
+const calendarId = process.env.GOOGLE_CALENDAR_ID || '';
+
+if (!privateKey || !clientEmail || !calendarId) {
+  console.error('[Google Calendar] Thiếu thông tin cấu hình credentials hoặc calendar ID.');
+}
+
+const auth = new google.auth.JWT(
+  clientEmail,
+  undefined,
+  privateKey,
+  ['https://www.googleapis.com/auth/calendar']
+);
+
+const calendar = google.calendar({ version: 'v3', auth });
+
+interface EventDetails {
+  studentName: string;
+  phone: string;
+  level: string;
+  coachName: string;
+  startTime: string; // ISOString
+  endTime: string; // ISOString
+  notes?: string;
+}
+
+/**
+ * Tạo mới một sự kiện lịch tập tennis trên Google Calendar
+ */
+export async function createCalendarEvent(details: EventDetails): Promise<{ eventId: string; htmlLink: string }> {
+  try {
+    const summary = `🎾 Lịch tập Tennis: ${details.studentName} [HLV: ${details.coachName}]`;
+    const description = `
+👤 Học viên: ${details.studentName}
+📞 Số điện thoại: ${details.phone}
+📘 Trình độ: ${details.level}
+👤 Huấn luyện viên phụ trách: ${details.coachName}
+📝 Ghi chú lịch dạy: ${details.notes || 'Không có ghi chú'}
+    `.trim();
+
+    const response = await calendar.events.insert({
+      calendarId: calendarId,
+      requestBody: {
+        summary: summary,
+        description: description,
+        start: {
+          dateTime: details.startTime,
+          timeZone: 'Asia/Ho_Chi_Minh',
+        },
+        end: {
+          dateTime: details.endTime,
+          timeZone: 'Asia/Ho_Chi_Minh',
+        },
+        colorId: '5', // Màu vàng/xanh chuối tương tự màu tennis
+      },
+    });
+
+    const eventId = response.data.id || '';
+    const htmlLink = response.data.htmlLink || '';
+
+    console.log(`[Google Calendar] Đã tạo thành công sự kiện: ${eventId}`);
+    return { eventId, htmlLink };
+  } catch (error) {
+    console.error('[Google Calendar] Lỗi khi tạo sự kiện:', error);
+    throw error;
+  }
+}
