@@ -201,6 +201,29 @@ app.put('/api/leads/:id', async (req: Request, res: Response) => {
       }
     }
 
+    // Nếu chuyển trạng thái thành Hủy (Cancelled), xóa sự kiện trên Google Calendar và xóa record buổi học
+    if (updates.status === 'Cancelled') {
+      try {
+        const { data: lesson } = await supabase
+          .from('lessons')
+          .select('*')
+          .eq('lead_id', id)
+          .maybeSingle();
+
+        if (lesson) {
+          if (lesson.google_event_id) {
+            await deleteCalendarEvent(lesson.google_event_id);
+          }
+          await supabase
+            .from('lessons')
+            .delete()
+            .eq('id', lesson.id);
+        }
+      } catch (calErr) {
+        console.error('[Calendar Cancel Fail]', calErr);
+      }
+    }
+
     return res.json(lead);
   } catch (err) {
     return res.status(500).json({ error: 'Lỗi hệ thống.' });

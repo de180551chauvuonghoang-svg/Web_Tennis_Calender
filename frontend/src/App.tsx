@@ -1178,88 +1178,176 @@ export default function App() {
                             </tr>
                           </thead>
                           <tbody>
-                            {leads.map(lead => (
-                              <tr key={lead.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.03)', transition: 'background 0.2s' }}>
-                                <td style={{ padding: '14px 10px', fontWeight: '600', whiteSpace: 'nowrap' }}>{lead.name}</td>
-                                <td style={{ padding: '14px 10px', whiteSpace: 'nowrap' }}>{lead.age || '—'}</td>
-                                <td style={{ padding: '14px 10px', whiteSpace: 'nowrap' }}>{lead.phone}</td>
-                                <td style={{ padding: '14px 10px', whiteSpace: 'nowrap' }}>
-                                  <span style={{
-                                    fontSize: '11px',
-                                    fontWeight: '700',
-                                    padding: '2px 8px',
-                                    borderRadius: '4px',
-                                    backgroundColor: lead.level === 'Basic' ? 'rgba(194,255,20,0.1)' : lead.level === 'Intermediate' ? 'rgba(59,130,246,0.1)' : 'rgba(236,72,153,0.1)',
-                                    color: lead.level === 'Basic' ? 'var(--accent-color)' : lead.level === 'Intermediate' ? '#3b82f6' : '#ec4899',
-                                    whiteSpace: 'nowrap'
-                                  }}>
-                                    {lead.level === 'Basic' ? 'Cơ bản' : lead.level === 'Intermediate' ? 'Trung cấp' : 'Nâng cao'}
-                                  </span>
-                                </td>
-                                <td style={{ padding: '14px 10px', fontSize: '13px', color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>
-                                  {formatDate(lead.created_at)}
-                                </td>
-                                <td style={{ padding: '14px 10px', whiteSpace: 'nowrap' }}>
-                                  <select 
-                                    value={lead.status}
-                                    onChange={e => handleUpdateStatus(lead.id, e.target.value as Lead['status'])}
-                                    style={{
-                                      backgroundColor: 'rgba(0,0,0,0.3)',
-                                      color: lead.status === 'Completed' ? 'var(--success-color)' : lead.status === 'Scheduled' ? 'var(--accent-color)' : lead.status === 'New' ? '#3b82f6' : lead.status === 'Contacted' ? '#eab308' : '#94a3b8',
-                                      border: '1px solid var(--border-color)',
-                                      borderRadius: '6px',
-                                      padding: '4px 8px',
-                                      fontSize: '12px',
-                                      fontWeight: '600',
-                                      outline: 'none',
-                                      cursor: 'pointer'
-                                    }}
-                                  >
-                                    <option value="New">Mới</option>
-                                    <option value="Contacted">Đã Liên Hệ</option>
-                                    <option value="Scheduled">Đã Lên Lịch</option>
-                                    <option value="Completed">Hoàn Thành</option>
-                                    <option value="Cancelled">Đã Hủy</option>
-                                  </select>
-                                </td>
-                                <td style={{ padding: '14px 10px', textAlign: 'right', whiteSpace: 'nowrap' }}>
-                                  <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', alignItems: 'center' }}>
-                                    <button 
-                                      onClick={() => setSelectedLead(lead)}
-                                      style={{
-                                        backgroundColor: (lead.status === 'Scheduled' || lead.status === 'Completed') ? '#eab308' : 'var(--accent-color)',
-                                        color: '#000',
-                                        border: 'none',
-                                        borderRadius: '6px',
-                                        padding: '6px 12px',
-                                        fontWeight: '700',
+                            {leads.map(lead => {
+                              const isCompleted = lead.status === 'Completed';
+                              const isCancelled = lead.status === 'Cancelled';
+                              const isScheduled = lead.status === 'Scheduled';
+                              const rowStyle = isCompleted ? { opacity: 0.4, textDecoration: 'line-through' } : {};
+
+                              return (
+                                <tr key={lead.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.03)', transition: 'background 0.2s' }}>
+                                  <td style={{ padding: '14px 10px', fontWeight: '600', whiteSpace: 'nowrap', ...rowStyle }}>{lead.name}</td>
+                                  <td style={{ padding: '14px 10px', whiteSpace: 'nowrap', ...rowStyle }}>{lead.age || '—'}</td>
+                                  <td style={{ padding: '14px 10px', whiteSpace: 'nowrap', ...rowStyle }}>{lead.phone}</td>
+                                  <td style={{ padding: '14px 10px', whiteSpace: 'nowrap', opacity: isCompleted ? 0.4 : 1 }}>
+                                    <span style={{
+                                      fontSize: '11px',
+                                      fontWeight: '700',
+                                      padding: '2px 8px',
+                                      borderRadius: '4px',
+                                      backgroundColor: lead.level === 'Basic' ? 'rgba(194,255,20,0.1)' : lead.level === 'Intermediate' ? 'rgba(59,130,246,0.1)' : 'rgba(236,72,153,0.1)',
+                                      color: lead.level === 'Basic' ? 'var(--accent-color)' : lead.level === 'Intermediate' ? '#3b82f6' : '#ec4899',
+                                      whiteSpace: 'nowrap',
+                                      textDecoration: isCompleted ? 'line-through' : 'none'
+                                    }}>
+                                      {lead.level === 'Basic' ? 'Cơ bản' : lead.level === 'Intermediate' ? 'Trung cấp' : 'Nâng cao'}
+                                    </span>
+                                  </td>
+                                  <td style={{ padding: '14px 10px', fontSize: '13px', color: 'var(--text-secondary)', whiteSpace: 'nowrap', ...rowStyle }}>
+                                    {formatDate(lead.created_at)}
+                                  </td>
+                                  <td style={{ padding: '14px 10px', whiteSpace: 'nowrap' }}>
+                                    {isCompleted ? (
+                                      <span style={{
                                         fontSize: '12px',
-                                        cursor: 'pointer',
-                                        display: 'flex',
+                                        fontWeight: '700',
+                                        color: 'var(--success-color)',
+                                        backgroundColor: 'rgba(34,197,94,0.1)',
+                                        padding: '4px 10px',
+                                        borderRadius: '6px',
+                                        display: 'inline-flex',
                                         alignItems: 'center',
                                         gap: '4px'
-                                      }}
-                                    >
-                                      <CalendarIcon size={12} /> {(lead.status === 'Scheduled' || lead.status === 'Completed') ? 'Sửa lịch' : 'Lên lịch'}
-                                    </button>
-                                    
-                                    <button 
-                                      onClick={() => handleDeleteLead(lead.id)}
-                                      style={{
-                                        backgroundColor: 'rgba(239,68,68,0.1)',
+                                      }}>
+                                        ✓ Hoàn Thành
+                                      </span>
+                                    ) : isCancelled ? (
+                                      <span style={{
+                                        fontSize: '12px',
+                                        fontWeight: '700',
                                         color: 'var(--error-color)',
-                                        border: 'none',
+                                        backgroundColor: 'rgba(239,68,68,0.1)',
+                                        padding: '4px 10px',
                                         borderRadius: '6px',
-                                        padding: '6px 8px',
-                                        cursor: 'pointer',
-                                      }}
-                                    >
-                                      <Trash2 size={13} />
-                                    </button>
-                                  </div>
-                                </td>
-                              </tr>
-                            ))}
+                                        display: 'inline-flex',
+                                        alignItems: 'center',
+                                        gap: '4px'
+                                      }}>
+                                        ✗ Đã Hủy
+                                      </span>
+                                    ) : (
+                                      <select 
+                                        value={lead.status}
+                                        onChange={e => handleUpdateStatus(lead.id, e.target.value as Lead['status'])}
+                                        style={{
+                                          backgroundColor: 'rgba(0,0,0,0.3)',
+                                          color: lead.status === 'Scheduled' ? 'var(--accent-color)' : lead.status === 'New' ? '#3b82f6' : lead.status === 'Contacted' ? '#eab308' : '#94a3b8',
+                                          border: '1px solid var(--border-color)',
+                                          borderRadius: '6px',
+                                          padding: '4px 8px',
+                                          fontSize: '12px',
+                                          fontWeight: '600',
+                                          outline: 'none',
+                                          cursor: 'pointer'
+                                        }}
+                                      >
+                                        <option value="New">Mới</option>
+                                        <option value="Contacted">Đã Liên Hệ</option>
+                                        <option value="Scheduled">Đã Lên Lịch</option>
+                                      </select>
+                                    )}
+                                  </td>
+                                  <td style={{ padding: '14px 10px', textAlign: 'right', whiteSpace: 'nowrap' }}>
+                                    <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', alignItems: 'center' }}>
+                                      {/* Lên lịch / Sửa lịch Button */}
+                                      <button 
+                                        onClick={() => setSelectedLead(lead)}
+                                        style={{
+                                          backgroundColor: (isScheduled || isCompleted) ? '#eab308' : 'var(--accent-color)',
+                                          color: '#000',
+                                          border: 'none',
+                                          borderRadius: '6px',
+                                          padding: '6px 12px',
+                                          fontWeight: '700',
+                                          fontSize: '12px',
+                                          cursor: 'pointer',
+                                          display: 'flex',
+                                          alignItems: 'center',
+                                          gap: '4px'
+                                        }}
+                                      >
+                                        <CalendarIcon size={12} /> {(isScheduled || isCompleted) ? 'Sửa lịch' : 'Lên lịch'}
+                                      </button>
+
+                                      {/* Hoàn thành Button (Chỉ hiển thị khi đã lên lịch) */}
+                                      {isScheduled && (
+                                        <button
+                                          onClick={() => handleUpdateStatus(lead.id, 'Completed')}
+                                          style={{
+                                            backgroundColor: 'rgba(34,197,94,0.1)',
+                                            border: '1px solid var(--success-color)',
+                                            color: 'var(--success-color)',
+                                            borderRadius: '6px',
+                                            padding: '6px 10px',
+                                            fontWeight: '700',
+                                            fontSize: '12px',
+                                            cursor: 'pointer',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            transition: 'all 0.2s'
+                                          }}
+                                          onMouseOver={e => e.currentTarget.style.backgroundColor = 'rgba(34,197,94,0.25)'}
+                                          onMouseOut={e => e.currentTarget.style.backgroundColor = 'rgba(34,197,94,0.1)'}
+                                          title="Hoàn thành buổi học"
+                                        >
+                                          Hoàn thành
+                                        </button>
+                                      )}
+
+                                      {/* Hủy lịch Button (Chỉ hiển thị khi đã lên lịch) */}
+                                      {isScheduled && (
+                                        <button
+                                          onClick={() => handleUpdateStatus(lead.id, 'Cancelled')}
+                                          style={{
+                                            backgroundColor: 'rgba(239,68,68,0.1)',
+                                            border: '1px solid var(--error-color)',
+                                            color: 'var(--error-color)',
+                                            borderRadius: '6px',
+                                            padding: '6px 10px',
+                                            fontWeight: '700',
+                                            fontSize: '12px',
+                                            cursor: 'pointer',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            transition: 'all 0.2s'
+                                          }}
+                                          onMouseOver={e => e.currentTarget.style.backgroundColor = 'rgba(239,68,68,0.25)'}
+                                          onMouseOut={e => e.currentTarget.style.backgroundColor = 'rgba(239,68,68,0.1)'}
+                                          title="Hủy lịch tập"
+                                        >
+                                          Hủy lịch
+                                        </button>
+                                      )}
+                                      
+                                      {/* Xóa Lead vĩnh viễn */}
+                                      <button 
+                                        onClick={() => handleDeleteLead(lead.id)}
+                                        style={{
+                                          backgroundColor: 'rgba(239,68,68,0.1)',
+                                          color: 'var(--error-color)',
+                                          border: 'none',
+                                          borderRadius: '6px',
+                                          padding: '6px 8px',
+                                          cursor: 'pointer',
+                                        }}
+                                      >
+                                        <Trash2 size={13} />
+                                      </button>
+                                    </div>
+                                  </td>
+                                </tr>
+                              );
+                            })}
                           </tbody>
                         </table>
                       </div>
