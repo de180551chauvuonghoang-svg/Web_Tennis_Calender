@@ -103,6 +103,80 @@ const TRANSLATIONS = {
   }
 };
 
+interface CustomSelectProps {
+  value: string;
+  options: { value: string; label: string }[];
+  onChange: (value: string) => void;
+}
+
+function CustomSelect({ value, options, onChange }: CustomSelectProps) {
+  const [isOpen, setIsOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const selectedOption = options.find(opt => opt.value === value) || options[0];
+
+  return (
+    <div ref={dropdownRef} style={{ position: 'relative', width: '100%' }}>
+      <div 
+        onClick={() => setIsOpen(!isOpen)}
+        className="custom-select-trigger"
+        style={{ borderColor: isOpen ? 'var(--accent-color)' : 'var(--border-color)' }}
+      >
+        <span>{selectedOption ? selectedOption.label : value}</span>
+        <span style={{ 
+          transform: isOpen ? 'rotate(180deg)' : 'rotate(0)', 
+          transition: 'transform 0.2s',
+          fontSize: '10px',
+          opacity: 0.7
+        }}>▼</span>
+      </div>
+
+      {isOpen && (
+        <div 
+          style={{
+            position: 'absolute',
+            top: 'calc(100% + 5px)',
+            left: 0,
+            right: 0,
+            backgroundColor: '#14161c',
+            border: '1px solid var(--border-color)',
+            borderRadius: '6px',
+            boxShadow: '0 10px 25px rgba(0,0,0,0.5)',
+            zIndex: 100,
+            maxHeight: '200px',
+            overflowY: 'auto',
+            backdropFilter: 'blur(10px)',
+            padding: '4px'
+          }}
+        >
+          {options.map(opt => (
+            <div
+              key={opt.value}
+              onClick={() => {
+                onChange(opt.value);
+                setIsOpen(false);
+              }}
+              className={`custom-select-option ${opt.value === value ? 'active' : ''}`}
+            >
+              {opt.label}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function App() {
   const [view, setView] = useState<'client' | 'admin'>('client');
   const [lang, setLang] = useState<'vi' | 'en'>('vi');
@@ -1180,31 +1254,23 @@ export default function App() {
                           
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                             <label style={{ fontSize: '12px', color: 'var(--text-secondary)', fontWeight: '600' }}>Huấn luyện viên giảng dạy</label>
-                            <select 
+                            <CustomSelect 
                               value={schedulerForm.coachName}
-                              onChange={e => setSchedulerForm({ ...schedulerForm, coachName: e.target.value })}
-                              style={{ backgroundColor: 'rgba(0,0,0,0.3)', border: '1px solid var(--border-color)', borderRadius: '6px', padding: '8px 10px', color: '#fff', fontSize: '13px', outline: 'none' }}
-                            >
-                              {coaches.length > 0 ? (
-                                coaches.map(c => (
-                                  <option key={c.id} value={c.name}>{c.name}</option>
-                                ))
-                              ) : (
-                                <option value="Hoang Jayce">Hoang Jayce</option>
-                              )}
-                            </select>
+                              onChange={val => setSchedulerForm({ ...schedulerForm, coachName: val })}
+                              options={coaches.length > 0 ? coaches.map(c => ({ value: c.name, label: c.name })) : [{ value: 'Hoang Jayce', label: 'Hoang Jayce' }]}
+                            />
                           </div>
 
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                             <label style={{ fontSize: '12px', color: 'var(--text-secondary)', fontWeight: '600' }}>Nền tảng mong muốn liên lạc</label>
-                            <select 
+                            <CustomSelect 
                               value={schedulerForm.platform}
-                              onChange={e => setSchedulerForm({ ...schedulerForm, platform: e.target.value })}
-                              style={{ backgroundColor: 'rgba(0,0,0,0.3)', border: '1px solid var(--border-color)', borderRadius: '6px', padding: '8px 10px', color: '#fff', fontSize: '13px', outline: 'none' }}
-                            >
-                              <option value="Zalo">Zalo</option>
-                              <option value="WhatsApp">WhatsApp</option>
-                            </select>
+                              onChange={val => setSchedulerForm({ ...schedulerForm, platform: val })}
+                              options={[
+                                { value: 'Zalo', label: 'Zalo' },
+                                { value: 'WhatsApp', label: 'WhatsApp' }
+                              ]}
+                            />
                           </div>
 
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
@@ -1231,18 +1297,18 @@ export default function App() {
 
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                             <label style={{ fontSize: '12px', color: 'var(--text-secondary)', fontWeight: '600' }}>Thời lượng tập</label>
-                            <select 
+                            <CustomSelect 
                               value={schedulerForm.duration}
-                              onChange={e => setSchedulerForm({ ...schedulerForm, duration: e.target.value })}
-                              style={{ backgroundColor: 'rgba(0,0,0,0.3)', border: '1px solid var(--border-color)', borderRadius: '6px', padding: '8px 10px', color: '#fff', fontSize: '13px', outline: 'none' }}
-                            >
-                              <option value="30">30 phút</option>
-                              <option value="60">1 giờ</option>
-                              <option value="90">1.5 giờ (90 phút)</option>
-                              <option value="120">2 giờ</option>
-                              <option value="150">2.5 giờ</option>
-                              <option value="180">3 giờ</option>
-                            </select>
+                              onChange={val => setSchedulerForm({ ...schedulerForm, duration: val })}
+                              options={[
+                                { value: '30', label: '30 phút' },
+                                { value: '60', label: '1 giờ' },
+                                { value: '90', label: '1.5 giờ (90 phút)' },
+                                { value: '120', label: '2 giờ' },
+                                { value: '150', label: '2.5 giờ' },
+                                { value: '180', label: '3 giờ' }
+                              ]}
+                            />
                           </div>
 
                           <button 
