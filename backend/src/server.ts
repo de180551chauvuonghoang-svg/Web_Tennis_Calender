@@ -291,17 +291,21 @@ app.post('/api/lessons', async (req: Request, res: Response) => {
         .eq('id', existingLesson.id);
     }
 
-    // Bản đồ tọa độ / Google Maps link của các sân tập
-    let mapsLink = '';
-    if (lat && lng) {
-      mapsLink = `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
-    } else if (court === 'Hào Anh tennis Coffee') {
-      mapsLink = 'https://www.google.com/maps/search/?api=1&query=Hao+Anh+Tennis+Coffee';
-    } else if (court === 'Sân Victoria resort') {
-      mapsLink = 'https://www.google.com/maps/search/?api=1&query=Victoria+Resort+Tennis+Court';
-    } else if (court) {
-      mapsLink = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(court)}`;
-    }
+    // Hardcoded court locations with exact addresses
+    const COURT_LOCATIONS: Record<string, { address: string; mapsLink: string }> = {
+      'Hào Anh tennis Coffee': {
+        address: 'V8JV+W45, Lý Thường Kiệt, Hội An Đông, Đà Nẵng, Vietnam',
+        mapsLink: 'https://www.google.com/maps/search/?api=1&query=V8JV%2BW45+L%C3%BD+Th%C6%B0%E1%BB%9Dng+Ki%E1%BB%87t+H%E1%BB%99i+An+%C4%90%C3%B4ng+%C4%90%C3%A0+N%E1%BA%B5ng+Vietnam',
+      },
+      'Sân Victoria resort': {
+        address: 'V9W9+8GM Hoi An Dong, Da Nang, Vietnam',
+        mapsLink: 'https://www.google.com/maps/search/?api=1&query=V9W9%2B8GM+Hoi+An+Dong+Da+Nang+Vietnam',
+      },
+    };
+
+    const courtInfo = COURT_LOCATIONS[court as string];
+    const mapsLink = courtInfo?.mapsLink || (court ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(court)}` : '');
+    const courtAddress = courtInfo?.address || court || 'Chưa xác định';
 
     // b. Tạo lịch trên Google Calendar
     const calendarResult = await createCalendarEvent({
@@ -312,7 +316,7 @@ app.post('/api/lessons', async (req: Request, res: Response) => {
       startTime,
       endTime,
       notes: lead.notes,
-      location: court || 'Chưa xác định'
+      location: courtAddress
     });
 
     // c. Lưu buổi học vào Supabase

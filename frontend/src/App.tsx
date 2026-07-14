@@ -19,7 +19,7 @@ import {
 // Backend URL
 const API_BASE = 'http://localhost:3001/api';
 
-declare const L: any;
+
 
 interface Lead {
   id: string;
@@ -186,109 +186,21 @@ function CustomSelect({ value, options, onChange }: CustomSelectProps) {
   );
 }
 
-interface MapPickerProps {
-  onLocationSelect: (lat: number, lng: number, address: string) => void;
-  defaultCourt: string;
-}
-
-function MapPicker({ onLocationSelect, defaultCourt }: MapPickerProps) {
-  const mapContainerRef = useRef<HTMLDivElement>(null);
-  const mapRef = useRef<any>(null);
-  const markerRef = useRef<any>(null);
-
-  // Predefined locations coordinates
-  const PREDEFINED_LOCATIONS: Record<string, { lat: number; lng: number }> = {
-    'Hào Anh tennis Coffee': { lat: 10.841398, lng: 106.772583 },
-    'Sân Victoria resort': { lat: 10.925624, lng: 106.792511 },
-  };
-
-  useEffect(() => {
-    if (!mapContainerRef.current) return;
-
-    // Check if L exists
-    if (typeof L === 'undefined') {
-      console.error('Leaflet library not loaded.');
-      return;
-    }
-
-    // Default coordinates (HCMC center or predefined)
-    const initialCoords = PREDEFINED_LOCATIONS[defaultCourt] || { lat: 10.762622, lng: 106.660172 };
-
-    // Initialize Map
-    const map = L.map(mapContainerRef.current, {
-      zoomControl: true,
-    }).setView([initialCoords.lat, initialCoords.lng], 15);
-    mapRef.current = map;
-
-    // Dark neon CartoDB base tiles
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-      attribution: '&copy; OpenStreetMap &copy; CartoDB',
-      subdomains: 'abcd',
-      maxZoom: 20
-    }).addTo(map);
-
-    // Custom Neon Leaflet Marker Icon
-    const neonIcon = L.divIcon({
-      className: 'custom-neon-marker',
-      html: `<div style="background-color: var(--accent-color); width: 14px; height: 14px; border: 2px solid #fff; border-radius: 50%; box-shadow: 0 0 10px var(--accent-glow);"></div>`,
-      iconSize: [14, 14],
-      iconAnchor: [7, 7]
-    });
-
-    // Initialize Marker
-    const marker = L.marker([initialCoords.lat, initialCoords.lng], { icon: neonIcon, draggable: true }).addTo(map);
-    markerRef.current = marker;
-
-    // Handle map click
-    map.on('click', (e: any) => {
-      const { lat, lng } = e.latlng;
-      marker.setLatLng([lat, lng]);
-      onLocationSelect(lat, lng, `Tọa độ: ${lat.toFixed(6)}, ${lng.toFixed(6)}`);
-    });
-
-    // Handle marker drag
-    marker.on('dragend', () => {
-      const latlng = marker.getLatLng();
-      onLocationSelect(latlng.lat, latlng.lng, `Tọa độ: ${latlng.lat.toFixed(6)}, ${latlng.lng.toFixed(6)}`);
-    });
-
-    // Trigger initial select
-    onLocationSelect(initialCoords.lat, initialCoords.lng, defaultCourt);
-
-    return () => {
-      map.remove();
-    };
-  }, []);
-
-  // Update map view when defaultCourt changes
-  useEffect(() => {
-    if (!mapRef.current || !markerRef.current) return;
-    const target = PREDEFINED_LOCATIONS[defaultCourt];
-    if (target) {
-      mapRef.current.setView([target.lat, target.lng], 16);
-      markerRef.current.setLatLng([target.lat, target.lng]);
-      onLocationSelect(target.lat, target.lng, defaultCourt);
-    }
-  }, [defaultCourt]);
-
-  return (
-    <div style={{ marginTop: '10px' }}>
-      <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginBottom: '5px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <span>📍 Di chuyển ghim hoặc click trên bản đồ để chọn tọa độ sân tập:</span>
-      </div>
-      <div 
-        ref={mapContainerRef} 
-        style={{ 
-          height: '185px', 
-          borderRadius: '8px', 
-          border: '1px solid var(--border-color)', 
-          overflow: 'hidden',
-          zIndex: 1
-        }} 
-      />
-    </div>
-  );
-}
+// Hardcoded court locations
+const COURT_LOCATIONS: Record<string, { address: string; mapsLink: string; lat: number; lng: number }> = {
+  'Hào Anh tennis Coffee': {
+    address: 'V8JV+W45, Lý Thường Kiệt, Hội An Đông, Đà Nẵng, Vietnam',
+    mapsLink: 'https://www.google.com/maps/search/?api=1&query=V8JV%2BW45+L%C3%BD+Th%C6%B0%E1%BB%9Dng+Ki%E1%BB%87t+H%E1%BB%99i+An+%C4%90%C3%B4ng+%C4%90%C3%A0+N%E1%BA%B5ng+Vietnam',
+    lat: 16.05167,
+    lng: 108.22167,
+  },
+  'Sân Victoria resort': {
+    address: 'V9W9+8GM Hoi An Dong, Da Nang, Vietnam',
+    mapsLink: 'https://www.google.com/maps/search/?api=1&query=V9W9%2B8GM+Hoi+An+Dong+Da+Nang+Vietnam',
+    lat: 16.058,
+    lng: 108.228,
+  },
+};
 
 export default function App() {
   const [view, setView] = useState<'client' | 'admin'>('client');
@@ -1569,46 +1481,54 @@ export default function App() {
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                             <label style={{ fontSize: '12px', color: 'var(--text-secondary)', fontWeight: '600' }}>Địa điểm / Sân tập</label>
                             <CustomSelect 
-                              value={['Hào Anh tennis Coffee', 'Sân Victoria resort'].includes(schedulerForm.court) ? schedulerForm.court : 'Khác'}
+                              value={schedulerForm.court}
                               onChange={val => {
-                                if (val === 'Khác') {
-                                  setSchedulerForm({ ...schedulerForm, court: '' });
-                                } else {
-                                  setSchedulerForm({ ...schedulerForm, court: val });
-                                }
+                                const courtData = COURT_LOCATIONS[val];
+                                setSchedulerForm({
+                                  ...schedulerForm,
+                                  court: val,
+                                  lat: courtData?.lat ?? schedulerForm.lat,
+                                  lng: courtData?.lng ?? schedulerForm.lng,
+                                });
                               }}
                               options={[
-                                { value: 'Hào Anh tennis Coffee', label: 'Hào Anh tennis Coffee (Sân 1)' },
-                                { value: 'Sân Victoria resort', label: 'Sân Victoria resort (Sân 2)' },
-                                { value: 'Khác', label: 'Khác (Nhập địa chỉ...)' }
+                                { value: 'Hào Anh tennis Coffee', label: '🎾 Sân 1 — Hào Anh tennis Coffee' },
+                                { value: 'Sân Victoria resort', label: '🎾 Sân 2 — Sân Victoria resort' },
                               ]}
                             />
                           </div>
 
-                          {!['Hào Anh tennis Coffee', 'Sân Victoria resort'].includes(schedulerForm.court) && (
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                              <input 
-                                type="text"
-                                placeholder="Nhập tên sân tập hoặc địa chỉ cụ thể..."
-                                value={schedulerForm.court}
-                                onChange={e => setSchedulerForm({ ...schedulerForm, court: e.target.value })}
-                                required
-                                style={{ backgroundColor: 'rgba(0,0,0,0.3)', border: '1px solid var(--border-color)', borderRadius: '6px', padding: '10px 15px', color: '#fff', fontSize: '13px', outline: 'none' }}
-                              />
-                            </div>
+                          {COURT_LOCATIONS[schedulerForm.court] && (
+                            <a
+                              href={COURT_LOCATIONS[schedulerForm.court].mapsLink}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              style={{
+                                display: 'flex',
+                                alignItems: 'flex-start',
+                                gap: '8px',
+                                backgroundColor: 'rgba(255,255,255,0.04)',
+                                border: '1px solid var(--border-color)',
+                                borderRadius: '8px',
+                                padding: '10px 12px',
+                                textDecoration: 'none',
+                                color: 'var(--accent-color)',
+                                fontSize: '12px',
+                                transition: 'background 0.2s',
+                              }}
+                              onMouseOver={e => (e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.08)')}
+                              onMouseOut={e => (e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.04)')}
+                            >
+                              <span style={{ fontSize: '16px', lineHeight: '1' }}>📍</span>
+                              <div>
+                                <div style={{ fontWeight: '600', marginBottom: '2px' }}>Xem trên Google Maps</div>
+                                <div style={{ color: 'var(--text-secondary)', fontSize: '11px', lineHeight: '1.4' }}>
+                                  {COURT_LOCATIONS[schedulerForm.court].address}
+                                </div>
+                              </div>
+                            </a>
                           )}
 
-                          <MapPicker 
-                            defaultCourt={['Hào Anh tennis Coffee', 'Sân Victoria resort'].includes(schedulerForm.court) ? schedulerForm.court : 'Hào Anh tennis Coffee'}
-                            onLocationSelect={(lat, lng, address) => {
-                              setSchedulerForm(prev => ({
-                                ...prev,
-                                lat,
-                                lng,
-                                court: ['Hào Anh tennis Coffee', 'Sân Victoria resort'].includes(prev.court) ? prev.court : prev.court || address
-                              }));
-                            }}
-                          />
 
                           <button 
                             type="submit" 
