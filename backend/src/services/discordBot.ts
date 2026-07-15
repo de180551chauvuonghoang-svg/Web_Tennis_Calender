@@ -61,12 +61,12 @@ export function startDiscordBot() {
       const bookingInfo = await parseDiscordBooking(content, currentDateStr);
       console.log('[Discord Bot] Kết quả phân tích từ AI:', bookingInfo);
 
-      if (!bookingInfo.studentName) {
-        await statusMsg.edit('❌ **AI không thể trích xuất được tên học viên từ tin nhắn. Vui lòng thử lại với tên rõ ràng hơn!**');
+      if (!bookingInfo.studentName && !bookingInfo.studentPhone) {
+        await statusMsg.edit('❌ **AI không thể trích xuất được tên hoặc số điện thoại học viên từ tin nhắn. Vui lòng thử lại với tên hoặc số điện thoại rõ ràng hơn!**');
         return;
       }
 
-      // 1. Tìm học viên trong bảng leads
+      // 1. Tìm học viên trong bảng leads - nhậm bằng tên trước, nếu không có thì tìm bằng SĐT
       let { data: lead, error: leadError } = await supabase
         .from('leads')
         .select('*')
@@ -74,15 +74,35 @@ export function startDiscordBot() {
         .limit(1)
         .maybeSingle();
 
-      // Nếu không tìm thấy, tự động tạo lead mới làm fallback
+      // Nếu không tìm thấy bằng tên và có số điện thoại, thì tìm bằng SĐT
+      if (!lead && bookingInfo.studentPhone) {
+        console.log(`[Discord Bot] Không tìm thấy bằng tên, thử tìm bằng SĐT: ${bookingInfo.studentPhone}`);
+        const phoneQuery = bookingInfo.studentPhone.startsWith('84')
+          ? bookingInfo.studentPhone
+          : '84' + bookingInfo.studentPhone.replace(/^0/, '');
+        
+        const altResult = await supabase
+          .from('leads')
+          .select('*')
+          .or(`phone.ilike.%${bookingInfo.studentPhone}%,phone.ilike.%${phoneQuery}%`)
+          .limit(1)
+          .maybeSingle();
+        lead = altResult.data;
+        if (lead) {
+          console.log(`[Discord Bot] Đã tìm thấy học viên bằng SĐT: ${lead.name}`);
+        }
+      }
+
+      // Nếu vẫn không tìm thấy, tự động tạo lead mới làm fallback
       if (!lead) {
-        console.log(`[Discord Bot] Không tìm thấy học viên "${bookingInfo.studentName}", tự động tạo mới lead...`);
+        const fallbackName = bookingInfo.studentName || `Học viên SĐT ${bookingInfo.studentPhone}`;
+        console.log(`[Discord Bot] Không tìm thấy học viên, tự động tạo mới lead "${fallbackName}"...`);
         const { data: newLead, error: createError } = await supabase
           .from('leads')
           .insert([{
-            name: bookingInfo.studentName,
+            name: fallbackName,
             age: null,
-            phone: 'Không có SĐT (Tạo từ Discord Bot)',
+            phone: bookingInfo.studentPhone || 'Không có SĐT (Tạo từ Discord Bot)',
             level: 'Basic',
             status: 'Contacted',
             notes: `[Tạo tự động từ Discord Bot chat của HLV ${message.author.username}]`
