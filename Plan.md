@@ -36,9 +36,9 @@ Vì các giải pháp chính thức như *WhatsApp Business API* và *Zalo Notif
                ▼ (Nếu học viên chọn WA)     ▼ (Nếu học viên chọn Zalo)
       [Tự động gửi tin WA]         [Gửi Discord kèm link Zalo]
      client.sendMessage()         https://zalo.me/[SĐT] (HLV chat 1-click)
-                                            OR
-                                  [MacroDroid trên Android]
-                                  (Tự động mở Zalo & Gửi tin)
+                                             OR
+                                   [Phím tắt iOS / Apple Shortcuts]
+                                   (1-Click: Mở Zalo & Copy tin nhắn)
 ```
 
 ---
@@ -53,17 +53,20 @@ Vì các giải pháp chính thức như *WhatsApp Business API* và *Zalo Notif
     *   Khi bên thứ 3 gửi tin nhắn chứa số điện thoại đến WhatsApp của HLV, Backend sẽ tự động bắt sự kiện `message`, dùng biểu thức chính quy (Regex) để trích xuất số điện thoại của học viên.
     *   **Tự động gửi tin nhắn**: Ngay lập tức gọi hàm `client.sendMessage('SĐT_Học_Viên@c.us', 'Tin nhắn chào mừng...')` để gửi tin giới thiệu trực tiếp từ số WhatsApp của HLV đến học viên mà không tốn một đồng phí nào.
 
-#### 2. Bộ phận Gửi tin qua Zalo (An toàn & Miễn phí)
-Zalo có cơ chế bảo mật chống spam rất nghiêm ngặt, việc tự động hóa gửi tin nhắn ngầm từ API không chính thức dễ bị khóa tài khoản. Có 2 cách tiếp cận miễn phí và an toàn:
+#### 2. Bộ phận Gửi tin qua Zalo (An toàn & Miễn phí trên iPhone)
+Vì iOS có tính bảo mật sandbox rất cao và bạn đang sử dụng **iPhone**, chúng ta sẽ sử dụng bộ công cụ tích hợp sẵn của Apple để tối ưu quy trình xuống chỉ còn **1-Click**:
 
-*   **Phương án A: Bán tự động (An toàn nhất - Khuyên dùng)**
-    *   Khi hệ thống phát hiện học viên muốn liên hệ qua Zalo, Backend sẽ bắn một tin nhắn thông báo vào kênh Discord hiện tại kèm đường link:
-        `📋 Liên hệ nhanh Zalo: https://zalo.me/[Số_điện_thoại_học_viên]`
-    *   HLV chỉ cần chạm nhẹ vào link trên điện thoại/máy tính → Zalo sẽ tự động mở đúng phòng chat với học viên đó, HLV chỉ cần dán tin nhắn chào mừng đã soạn sẵn.
-*   **Phương án B: Tự động hóa 100% bằng MacroDroid (Dành cho điện thoại Android)**
-    *   Sử dụng ứng dụng **MacroDroid** (miễn phí) trên điện thoại Android của HLV.
-    *   Khi Backend nhận được học viên mới dùng Zalo, nó gửi một webhook đến app MacroDroid.
-    *   MacroDroid sẽ tự động thực hiện các thao tác giả lập trên màn hình điện thoại: *Mở Zalo → Tìm kiếm số điện thoại → Dán nội dung chào hỏi → Nhấn Gửi*.
+*   **Phương án A: Nhấp mở nhanh từ Discord (Đơn giản nhất)**
+    *   Khi có học viên chọn Zalo, Backend gửi tin nhắn thông báo vào Discord của bạn kèm link: `https://zalo.me/[Số_điện_thoại]`.
+    *   Bạn chỉ cần chạm vào link trên Discord của iPhone → Zalo trên iOS sẽ tự động mở đúng phòng chat với học viên đó để bạn gửi tin nhắn chào mừng.
+*   **Phương án B: Sử dụng Phím tắt iOS (Apple Shortcuts) + Thông báo Bark (Tự động hóa 1-Click)**
+    *   **Công nghệ**: Sử dụng ứng dụng **Bark** (App nhận thông báo push miễn phí, mã nguồn mở trên App Store) kết hợp ứng dụng **Phím tắt (Shortcuts)** mặc định của iPhone.
+    *   **Cơ chế hoạt động**:
+        1. Khi Backend nhận được số điện thoại học viên từ bên thứ 3, nó sẽ gửi một push notification đến iPhone của bạn thông qua API của app Bark.
+        2. Khi bạn chạm vào thông báo trên màn hình khóa iPhone, nó sẽ kích hoạt một **Phím tắt iOS** tự động:
+            *   Tự động sao chép (Copy) nội dung tin nhắn chào mừng vào bộ nhớ tạm (Clipboard).
+            *   Tự động mở ứng dụng Zalo trỏ thẳng đến số điện thoại học viên qua URL Scheme: `zalo://chat?phone=[SĐT]`.
+        3. Bạn chỉ cần chạm giữ vào khung chat Zalo → chọn **Dán (Paste)** → Nhấn **Gửi**. Quy trình cực kỳ nhanh gọn và tuyệt đối an toàn.
 
 ---
 
