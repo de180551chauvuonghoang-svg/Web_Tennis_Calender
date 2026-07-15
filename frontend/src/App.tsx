@@ -256,6 +256,7 @@ export default function App() {
   });
   const [isScheduling, setIsScheduling] = useState(false);
   const [scheduleSuccess, setScheduleSuccess] = useState(false);
+  const [copiedCourt, setCopiedCourt] = useState(false);
 
   // File Upload Ref
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -1499,11 +1500,9 @@ export default function App() {
                           </div>
 
                           {COURT_LOCATIONS[schedulerForm.court] && (
-                            <a
-                              href={COURT_LOCATIONS[schedulerForm.court].mapsLink}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              style={{
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                              {/* Address display row */}
+                              <div style={{
                                 display: 'flex',
                                 alignItems: 'flex-start',
                                 gap: '8px',
@@ -1511,22 +1510,74 @@ export default function App() {
                                 border: '1px solid var(--border-color)',
                                 borderRadius: '8px',
                                 padding: '10px 12px',
-                                textDecoration: 'none',
-                                color: 'var(--accent-color)',
                                 fontSize: '12px',
-                                transition: 'background 0.2s',
-                              }}
-                              onMouseOver={e => (e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.08)')}
-                              onMouseOut={e => (e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.04)')}
-                            >
-                              <span style={{ fontSize: '16px', lineHeight: '1' }}>📍</span>
-                              <div>
-                                <div style={{ fontWeight: '600', marginBottom: '2px' }}>Xem trên Google Maps</div>
-                                <div style={{ color: 'var(--text-secondary)', fontSize: '11px', lineHeight: '1.4' }}>
-                                  {COURT_LOCATIONS[schedulerForm.court].address}
+                              }}>
+                                <span style={{ fontSize: '15px', lineHeight: '1.2', flexShrink: 0 }}>📍</span>
+                                <div style={{ flex: 1, minWidth: 0 }}>
+                                  <div style={{ fontWeight: '600', marginBottom: '3px', color: 'var(--text-primary)' }}>Địa chỉ sân tập</div>
+                                  <div style={{ color: 'var(--text-secondary)', fontSize: '11px', lineHeight: '1.5', wordBreak: 'break-word' }}>
+                                    {COURT_LOCATIONS[schedulerForm.court].address}
+                                  </div>
                                 </div>
                               </div>
-                            </a>
+
+                              {/* Action buttons: Maps + Copy */}
+                              <div style={{ display: 'flex', gap: '6px' }}>
+                                <a
+                                  href={COURT_LOCATIONS[schedulerForm.court].mapsLink}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  style={{
+                                    flex: 1,
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    gap: '5px',
+                                    backgroundColor: 'rgba(66,133,244,0.12)',
+                                    border: '1px solid rgba(66,133,244,0.3)',
+                                    borderRadius: '6px',
+                                    padding: '8px 10px',
+                                    textDecoration: 'none',
+                                    color: '#4285F4',
+                                    fontSize: '12px',
+                                    fontWeight: '600',
+                                    transition: 'background 0.2s',
+                                  }}
+                                  onMouseOver={e => (e.currentTarget.style.backgroundColor = 'rgba(66,133,244,0.22)')}
+                                  onMouseOut={e => (e.currentTarget.style.backgroundColor = 'rgba(66,133,244,0.12)')}
+                                >
+                                  🗺️ Mở Google Maps
+                                </a>
+
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    navigator.clipboard.writeText(COURT_LOCATIONS[schedulerForm.court].address).then(() => {
+                                      setCopiedCourt(true);
+                                      setTimeout(() => setCopiedCourt(false), 2000);
+                                    });
+                                  }}
+                                  style={{
+                                    flex: 1,
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    gap: '5px',
+                                    backgroundColor: copiedCourt ? 'rgba(34,197,94,0.15)' : 'rgba(255,255,255,0.05)',
+                                    border: copiedCourt ? '1px solid rgba(34,197,94,0.4)' : '1px solid var(--border-color)',
+                                    borderRadius: '6px',
+                                    padding: '8px 10px',
+                                    color: copiedCourt ? 'var(--success-color)' : 'var(--text-secondary)',
+                                    fontSize: '12px',
+                                    fontWeight: '600',
+                                    cursor: 'pointer',
+                                    transition: 'all 0.2s',
+                                  }}
+                                >
+                                  {copiedCourt ? '✓ Đã sao chép!' : '📋 Sao chép địa chỉ'}
+                                </button>
+                              </div>
+                            </div>
                           )}
 
 
