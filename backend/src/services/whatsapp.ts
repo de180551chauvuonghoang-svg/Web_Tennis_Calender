@@ -56,10 +56,13 @@ export function startWhatsAppClient() {
     console.error('[WhatsApp] Xác thực thất bại:', msg);
   });
 
-  // Lắng nghe tin nhắn đến
-  client.on('message', async (message) => {
+  // Lắng nghe tất cả tin nhắn mới (kể cả khi đang mở chat hoặc đã đọc ở thiết bị khác)
+  client.on('message_create', async (message) => {
     try {
-      console.log(`[WhatsApp Debug] Nhận tin nhắn từ: ${message.from}, nội dung: "${message.body}"`);
+      // Bỏ qua tin nhắn do chính tài khoản HLV gửi đi (chỉ nhận tin nhắn từ người khác gửi đến)
+      if (message.fromMe) return;
+
+      console.log(`[WhatsApp Debug] Nhận tin nhắn từ JID: ${message.from}, nội dung: "${message.body}"`);
       
       const monitoredRaw = process.env.MONITORED_PHONES || '';
       if (!monitoredRaw) {
