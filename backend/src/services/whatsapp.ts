@@ -71,11 +71,13 @@ export function startWhatsAppClient() {
       }
 
       const monitoredPhones = monitoredRaw.split(',').map(p => p.trim().replace(/\D/g, ''));
-      const senderJid = message.from; // định dạng: 84905148076@c.us
-      const senderPhone = senderJid.split('@')[0];
+      const contact = await message.getContact();
+      const senderPhone = (contact.number || message.from.split('@')[0]).trim();
+      console.log(`[WhatsApp Debug] Giải mã số điện thoại người gửi thành công: "${senderPhone}" (từ JID: ${message.from})`);
 
       // Kiểm tra xem tin nhắn có gửi từ các số điện thoại đang theo dõi hay không
       if (!monitoredPhones.includes(senderPhone)) {
+        console.log(`[WhatsApp Debug] Số người gửi "${senderPhone}" không nằm trong danh sách theo dõi [${monitoredPhones.join(', ')}]. Bỏ qua.`);
         return;
       }
 
@@ -114,7 +116,7 @@ export function startWhatsAppClient() {
 
       // Tự động kết bạn và gửi tin nhắn chào mừng qua WhatsApp cho học viên
       const studentJid = formatWhatsappJid(leadInfo.phone);
-      const welcomeMessage = `Chào bạn ${leadInfo.name}, mình là Huấn luyện viên Tennis từ hệ thống Web Tennis Calendar 🎾\n\nMình nhận được thông tin đăng ký học thử của bạn. Mình muốn kết bạn để tiện trao đổi và chốt lịch tập phù hợp cho bạn nhé!`;
+      const welcomeMessage = `Hello ${leadInfo.name}, I am the Coach Hoang Jayce. Our partner has referred your information to us. Could you share what level of tennis you are interested in (beginner or advanced), and which the free time and many lesson you would like to train in ?`;
 
       await client.sendMessage(studentJid, welcomeMessage);
       console.log(`[WhatsApp] Đã gửi tin nhắn chào mừng thành công tới học viên (${leadInfo.phone})`);
