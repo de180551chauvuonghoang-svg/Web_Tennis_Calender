@@ -11,6 +11,8 @@ import { createCalendarEvent, deleteCalendarEvent, updateCalendarEventColor } fr
 import { sendDiscordBookingNotification } from './services/discord';
 import { performOcr } from './services/groq';
 import { startScheduler } from './scheduler';
+import { startWhatsAppClient } from './services/whatsapp';
+import { startDiscordBot } from './services/discordBot';
 
 dotenv.config({ path: path.resolve(__dirname, '../.env') });
 
@@ -477,4 +479,18 @@ app.listen(PORT, () => {
   console.log(`[Server] Web Tennis Calendar đang chạy tại cổng http://localhost:${PORT}`);
   // Khởi chạy cron job quét nhắc lịch
   startScheduler();
+
+  // Khởi chạy Discord Bot
+  try {
+    startDiscordBot();
+  } catch (err) {
+    console.error('[Server] Lỗi khi khởi chạy Discord Bot:', err);
+  }
+
+  // Khởi chạy WhatsApp Client
+  try {
+    startWhatsAppClient();
+  } catch (err) {
+    console.error('[Server] Lỗi khi khởi chạy WhatsApp Client:', err);
+  }
 });
