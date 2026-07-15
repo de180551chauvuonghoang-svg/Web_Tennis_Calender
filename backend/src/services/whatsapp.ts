@@ -151,8 +151,24 @@ export function startWhatsAppClient() {
       const welcomeMessage = `Hello ${studentName}, I am the Coach Hoang Jayce. Our partner has referred your information to us. Could you share what level of tennis you are interested in (beginner or advanced), and which the free time and many lesson you would like to train in?`;
 
       try {
-        const studentContact = await client.getContactById(studentJid);
-        if (studentContact && studentContact.isMyContact) {
+        const contacts = await client.getContacts();
+        const isSavedInContacts = contacts.some(c => c.id._serialized === studentJid);
+        
+        let isSaved = isSavedInContacts;
+        
+        try {
+          const studentContact = await client.getContactById(studentJid);
+          if (studentContact) {
+            // Nếu contact có thuộc tính name hợp lệ (khác với số điện thoại) thì coi như đã lưu
+            if (studentContact.name && studentContact.name !== studentContact.number) {
+              isSaved = true;
+            }
+          }
+        } catch (err) {
+          console.error('[WhatsApp] Lỗi khi getContactById:', err);
+        }
+
+        if (isSaved) {
           console.log(`[WhatsApp] Học viên (${leadInfo.phone}) đã có sẵn trong danh bạ HLV.`);
           console.log('đã có trong danh bạ'); // In đúng yêu cầu: "in ra đã có trong danh bạ"
           contactStatus = 'Học viên đã có sẵn trong danh bạ (Hệ thống không gửi lại tin nhắn giới thiệu)';

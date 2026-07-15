@@ -494,6 +494,7 @@ app.listen(PORT, () => {
     console.error('[Server] Lỗi khi khởi chạy WhatsApp Client:', err);
   }
 });
-// Trigger reload: update introduction message template to use mate
+// Trigger reload: fix isMyContact bug using getContacts
+
 
 
