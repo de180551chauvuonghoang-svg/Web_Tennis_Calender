@@ -185,11 +185,19 @@ export function startDiscordBot() {
         return;
       }
 
-      // 7. Cập nhật trạng thái lead sang 'Scheduled'
+      // 7. Cập nhật trạng thái lead sang 'Scheduled' và total_sessions nếu có
+      const updateFields: Record<string, any> = { status: 'Scheduled' };
+      if (bookingInfo.totalSessions > 0) {
+        updateFields.total_sessions = bookingInfo.totalSessions;
+        console.log(`[Discord Bot] Cập nhật tổng số buổi học: ${bookingInfo.totalSessions} cho ${lead.name}`);
+      }
       await supabase
         .from('leads')
-        .update({ status: 'Scheduled' })
+        .update(updateFields)
         .eq('id', lead.id);
+      // Refresh lead data
+      const { data: updatedLead } = await supabase.from('leads').select('*').eq('id', lead.id).single();
+      if (updatedLead) Object.assign(lead, updatedLead);
 
       // 8. Đồng bộ vào Google Sheets đối soát
       await appendLessonToSheet({
@@ -210,6 +218,12 @@ export function startDiscordBot() {
                new Date(iso).toLocaleDateString('vi-VN');
       };
 
+      const completedSessions = (lead as any).completed_sessions || 0;
+      const totalSessions = (lead as any).total_sessions || 0;
+      const sessionsInfo = totalSessions > 0
+        ? `${completedSessions}/${totalSessions} buổi`
+        : (completedSessions > 0 ? `Đã tập ${completedSessions} buổi` : 'Chưa có thông tin');
+
       const successEmbed = {
         title: '🎾 THÀNH CÔNG — TỰ ĐỘNG ĐẶT LỊCH QUA DISCORD BOT',
         description: `🔔 Buổi tập của học viên **${lead.name}** đã được lên lịch thành công bởi HLV **${message.author.username}**!`,
@@ -218,9 +232,9 @@ export function startDiscordBot() {
           { name: '👤 Học viên', value: lead.name, inline: true },
           { name: '⏰ Thời gian bắt đầu', value: formatTime(startTimeStr), inline: true },
           { name: '⏱️ Thời lượng', value: `${bookingInfo.duration} phút`, inline: true },
+          { name: '📊 Tiến độ buổi học', value: sessionsInfo, inline: true },
           { name: '📍 Địa điểm / Sân tập', value: bookingInfo.court, inline: true },
           { name: '🗺️ Bản đồ Google Maps', value: `[Bấm để mở Bản đồ](${mapsLink})`, inline: true },
-          { name: '\u200b', value: '\u200b', inline: true },
           { name: '📋 Địa chỉ đầy đủ (copy)', value: `\`\`\`\n${courtAddress}\n\`\`\``, inline: false }
         ],
         footer: {

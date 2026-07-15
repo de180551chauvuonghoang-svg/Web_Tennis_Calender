@@ -30,6 +30,8 @@ interface Lead {
   level: string;
   status: 'New' | 'Contacted' | 'Scheduled' | 'Completed' | 'Cancelled';
   notes: string;
+  total_sessions: number;
+  completed_sessions: number;
   created_at: string;
   lessons?: {
     id: string;
@@ -216,7 +218,8 @@ export default function App() {
     age: '',
     phone: '',
     level: 'Basic',
-    notes: ''
+    notes: '',
+    total_sessions: ''
   });
   const [isSubmittingLead, setIsSubmittingLead] = useState(false);
   const [clientSuccess, setClientSuccess] = useState(false);
@@ -448,7 +451,7 @@ export default function App() {
 
       if (response.ok) {
         setClientSuccess(true);
-        setClientForm({ name: '', age: '', phone: '', level: 'Basic', notes: '' });
+        setClientForm({ name: '', age: '', phone: '', level: 'Basic', notes: '', total_sessions: '' });
       } else {
         const err = await response.json();
         setClientError(err.error || 'Error submitting form.');
@@ -844,6 +847,19 @@ export default function App() {
                   </div>
 
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    <label style={{ fontSize: '13px', fontWeight: '600', color: 'var(--text-secondary)' }}>{lang === 'vi' ? 'Số buổi muốn tập luyện' : 'Number of Sessions'}</label>
+                    <input 
+                      type="number" 
+                      min="1"
+                      max="100"
+                      placeholder={lang === 'vi' ? 'Ví dụ: 10 buổi' : 'e.g., 10 sessions'}
+                      value={clientForm.total_sessions}
+                      onChange={e => setClientForm({ ...clientForm, total_sessions: e.target.value })}
+                      style={{ backgroundColor: 'rgba(255,255,255,0.03)', border: '1px solid var(--border-color)', borderRadius: '8px', padding: '12px 15px', color: '#fff', fontSize: '14px', outline: 'none' }}
+                    />
+                  </div>
+
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                     <label style={{ fontSize: '13px', fontWeight: '600', color: 'var(--text-secondary)' }}>{t.labelNotes}</label>
                     <textarea 
                       placeholder={t.placeholderNotes}
@@ -1185,7 +1201,8 @@ export default function App() {
                                 age: '',
                                 phone: ocrResult.phone,
                                 level: 'Basic',
-                                notes: `Khách hàng trích xuất qua ảnh OCR. Nền tảng: ${ocrResult.platform}`
+                                notes: `Khách hàng trích xuất qua ảnh OCR. Nền tảng: ${ocrResult.platform}`,
+                                total_sessions: ''
                               });
                               setView('client');
                             }}

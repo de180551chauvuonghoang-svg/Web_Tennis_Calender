@@ -7,6 +7,8 @@ CREATE TABLE leads (
     level TEXT NOT NULL, -- 'Basic', 'Intermediate', 'Advanced'
     status TEXT NOT NULL DEFAULT 'New', -- 'New', 'Contacted', 'Scheduled', 'Cancelled'
     notes TEXT,
+    total_sessions INTEGER DEFAULT 0, -- Tổng số buổi học đăng kí
+    completed_sessions INTEGER DEFAULT 0, -- Số buổi học đã hoàn thành
     created_at TIMESTAMPTZ DEFAULT now()
 );
 

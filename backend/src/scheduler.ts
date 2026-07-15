@@ -65,7 +65,9 @@ export function startScheduler() {
             notes: lead.notes || '',
             court: courtName,
             courtAddress: courtAddress,
-            mapsLink: (lesson as any).maps_link || ''
+            mapsLink: (lesson as any).maps_link || '',
+            completedSessions: lead.completed_sessions,
+            totalSessions: lead.total_sessions
           });
 
           // Cập nhật trạng thái reminder_sent = true
@@ -77,6 +79,42 @@ export function startScheduler() {
           if (updateError) {
             console.error(`[Scheduler] Lỗi khi cập nhật trạng thái nhắc nhở cho lesson ${lesson.id}:`, updateError);
           }
+
+          // Tăng completed_sessions cho học viên
+          const newCompleted = (lead.completed_sessions || 0) + 1;
+          const { error: sessionUpdateErr } = await supabase
+            .from('leads')
+            .update({ completed_sessions: newCompleted })
+            .eq('id', lead.id);
+
+          if (sessionUpdateErr) {
+            console.error(`[Scheduler] Lỗi cập nhật completed_sessions:`, sessionUpdateErr);
+          } else {
+            console.log(`[Scheduler] Đã cập nhật buổi học hoàn thành: ${newCompleted}/${lead.total_sessions || '?'} cho học viên ${lead.name}`);
+
+            // Gửi thông báo bổ sung lên Discord về tiến độ buổi học
+            const totalSessions = lead.total_sessions || 0;
+            const discordWebhookUrl = process.env.DISCORD_WEBHOOK_URL || '';
+            if (discordWebhookUrl && totalSessions > 0) {
+              const progressEmbed = {
+                title: '📊 CẬP NHẬT TIẾN ĐỘ BUỔI HỌC',
+                description: `HLV **${lesson.coach_name}** vừa hoàn thành buổi tập với học viên **${lead.name}**`,
+                color: 16776960, // Màu vàng
+                fields: [
+                  { name: '👤 Học viên', value: lead.name, inline: true },
+                  { name: '📞 SĐT', value: lead.phone, inline: true },
+                  { name: '📊 Tiến độ', value: `**${newCompleted}/${totalSessions}** buổi`, inline: true },
+                  { name: '📈 Còn lại', value: `${Math.max(0, totalSessions - newCompleted)} buổi`, inline: true },
+                ],
+                footer: { text: 'Tennis AI - Hệ thống theo dõi buổi học tự động' }
+              };
+              fetch(discordWebhookUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ embeds: [progressEmbed] })
+              }).catch(err => console.error('[Scheduler] Lỗi gửi Discord progress:', err));
+            }
+          }
         }
       }
     } catch (error) {
@@ -84,3 +122,4 @@ export function startScheduler() {
     }
   });
 }
+

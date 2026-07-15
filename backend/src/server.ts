@@ -53,7 +53,7 @@ const upload = multer({
  */
 app.post('/api/leads', async (req: Request, res: Response) => {
   try {
-    const { name, age, phone, level, notes } = req.body;
+    const { name, age, phone, level, notes, total_sessions } = req.body;
 
     if (!name || !phone || !level) {
       return res.status(400).json({ error: 'Thiếu thông tin bắt buộc (Tên, Số điện thoại, Trình độ).' });
@@ -65,7 +65,9 @@ app.post('/api/leads', async (req: Request, res: Response) => {
       phone,
       level,
       status: 'New',
-      notes: notes || ''
+      notes: notes || '',
+      total_sessions: total_sessions ? parseInt(total_sessions) : 0,
+      completed_sessions: 0
     };
 
     // a. Lưu vào Supabase

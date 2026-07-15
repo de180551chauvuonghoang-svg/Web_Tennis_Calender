@@ -96,6 +96,8 @@ interface LessonNotificationDetails {
   court?: string;
   courtAddress?: string;
   mapsLink?: string;
+  completedSessions?: number;
+  totalSessions?: number;
 }
 
 /**
@@ -138,17 +140,21 @@ export async function sendDiscordReminderNotification(details: LessonNotificatio
   const duration = calculateDurationMinutes(details.startTime, details.endTime);
   const formattedStart = formatVietnameseDateTime(details.startTime);
 
+  const completed = details.completedSessions || 0;
+  const total = details.totalSessions || 0;
+  const progressText = total > 0 ? `${completed}/${total} buổi` : `Đã tập ${completed} buổi`;
+
   const embed: DiscordEmbed = {
     title: '⏰ [REMINDER] BUỔI TẬP TENNIS SẮP BẮT ĐẦU',
-    description: `⚠️ Huấn luyện viên **${details.coachName}** lưu ý sân bãi và dụng cụ! Buổi học thử của học viên **${details.studentName}** sẽ diễn ra sau **30 phút** nữa.`,
+    description: `⚠️ Huấn luyện viên **${details.coachName}** lưu ý sân bãi và dụng cụ! Buổi tập của học viên **${details.studentName}** sẽ diễn ra sau **30 phút** nữa.`,
     color: 16347926, // Màu cam cảnh báo #F97316
     fields: [
       { name: '👤 Học viên', value: details.studentName, inline: true },
       { name: '⏰ Thời gian bắt đầu', value: formattedStart, inline: true },
       { name: '⏱️ Thời lượng tập', value: `${duration} phút`, inline: true },
       { name: '📍 Sân tập', value: details.court || 'Chưa xác định', inline: true },
+      { name: '📊 Tiến độ học viên', value: progressText, inline: true },
       { name: '🗺️ Bản đồ Google Maps', value: details.mapsLink ? `[Bấm để mở Bản đồ](${details.mapsLink})` : 'Không có', inline: true },
-      { name: '\u200b', value: '\u200b', inline: true },
       ...(details.courtAddress ? [{ name: '📋 Địa chỉ đầy đủ (copy)', value: `\`\`\`\n${details.courtAddress}\n\`\`\``, inline: false }] : []),
       { name: '📞 Liên hệ nhanh', value: `${details.platform || 'Zalo'}: ${details.phone}`, inline: false },
       { name: '📝 Ghi chú cần lưu ý', value: details.notes || 'Không có ghi chú', inline: false }
