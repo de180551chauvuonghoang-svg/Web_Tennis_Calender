@@ -59,8 +59,13 @@ export function startWhatsAppClient() {
   // Lắng nghe tin nhắn đến
   client.on('message', async (message) => {
     try {
+      console.log(`[WhatsApp Debug] Nhận tin nhắn từ: ${message.from}, nội dung: "${message.body}"`);
+      
       const monitoredRaw = process.env.MONITORED_PHONES || '';
-      if (!monitoredRaw) return;
+      if (!monitoredRaw) {
+        console.log('[WhatsApp Debug] Không tìm thấy MONITORED_PHONES trong env.');
+        return;
+      }
 
       const monitoredPhones = monitoredRaw.split(',').map(p => p.trim().replace(/\D/g, ''));
       const senderJid = message.from; // định dạng: 84905148076@c.us
