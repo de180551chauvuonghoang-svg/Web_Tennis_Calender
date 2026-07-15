@@ -3,6 +3,7 @@ import cors from 'cors';
 import multer from 'multer';
 import dotenv from 'dotenv';
 import path from 'path';
+import fs from 'fs';
 
 import { supabase } from './services/supabase';
 import { appendLeadToSheet, appendLessonToSheet } from './services/sheets';
@@ -444,17 +445,31 @@ app.post('/api/ocr', upload.single('image'), async (req: Request, res: Response)
 });
 
 
-// Serving frontend built files in production environment
+// Serving frontend built files in production environment (if directory exists)
 const frontendDistPath = path.resolve(__dirname, '../../frontend/dist');
-app.use(express.static(frontendDistPath));
+if (fs.existsSync(frontendDistPath)) {
+  console.log('[Server] Đang phục vụ tệp tĩnh Frontend từ thư mục:', frontendDistPath);
+  app.use(express.static(frontendDistPath));
 
-// For routing support (Vite single page app index fallback)
-app.get('*', (req, res, next) => {
-  if (req.path.startsWith('/api')) {
-    return next();
-  }
-  res.sendFile(path.join(frontendDistPath, 'index.html'));
-});
+  app.get('*', (req, res, next) => {
+    if (req.path.startsWith('/api')) {
+      return next();
+    }
+    const indexPath = path.join(frontendDistPath, 'index.html');
+    if (fs.existsSync(indexPath)) {
+      res.sendFile(indexPath);
+    } else {
+      next();
+    }
+  });
+} else {
+  console.log('[Server] Chạy chế độ chỉ API (Backend độc lập). Không phục vụ tệp tĩnh.');
+  
+  // Trả về JSON chào mừng tại root để Render check liveness thành công
+  app.get('/', (req, res) => {
+    res.json({ status: 'healthy', message: 'Web Tennis Calendar API is running.' });
+  });
+}
 
 // ==================== KHỞI CHẠY SERVER ====================
 
