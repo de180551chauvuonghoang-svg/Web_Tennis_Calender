@@ -17,8 +17,8 @@ import {
 } from 'lucide-react';
 
 // Backend URL
-// Backend URL — dùng relative path '/api' khi chạy production (cùng host), localhost khi dev
-const API_BASE = (import.meta as any).env?.DEV ? 'http://localhost:3001/api' : '/api';
+// Backend URL — dùng VITE_API_URL khi deploy production, localhost khi dev
+const API_BASE = (import.meta as any).env?.VITE_API_URL || 'http://localhost:3001/api';
 
 
 
