@@ -4,6 +4,7 @@ import qrcode from 'qrcode-terminal';
 import { parseLeadMessage } from './groq';
 import { supabase } from './supabase';
 import { sendDiscordBookingNotification } from './discord';
+import fs from 'fs';
 
 let client: Client;
 
@@ -20,6 +21,16 @@ function formatWhatsappJid(phone: string): string {
 
 export function startWhatsAppClient() {
   console.log('[WhatsApp] Đang khởi tạo client...');
+
+  // Xóa session cũ nếu có để luôn yêu cầu quét mã QR mỗi lần chạy theo yêu cầu của người dùng
+  try {
+    if (fs.existsSync('./.wwebjs_auth')) {
+      fs.rmSync('./.wwebjs_auth', { recursive: true, force: true });
+      console.log('[WhatsApp] Đã xóa session cũ để in lại mã QR liên kết.');
+    }
+  } catch (err) {
+    console.error('[WhatsApp] Lỗi khi xóa session cũ:', err);
+  }
 
   client = new Client({
     authStrategy: new LocalAuth({
@@ -59,10 +70,12 @@ export function startWhatsAppClient() {
   // Lắng nghe tất cả tin nhắn mới (kể cả khi đang mở chat hoặc đã đọc ở thiết bị khác)
   client.on('message_create', async (message) => {
     try {
-      // Bỏ qua tin nhắn do chính tài khoản HLV gửi đi (chỉ nhận tin nhắn từ người khác gửi đến)
-      if (message.fromMe) return;
+      // Tránh lặp vô hạn bằng cách bỏ qua các tin nhắn tự giới thiệu của chính bot
+      if (message.body.includes('I am the Coach') || message.body.includes('Our partner has referred your information')) {
+        return;
+      }
 
-      console.log(`[WhatsApp Debug] Nhận tin nhắn từ JID: ${message.from}, nội dung: "${message.body}"`);
+      console.log(`[WhatsApp Debug] Nhận tin nhắn từ JID: ${message.from}, To: ${message.to}, fromMe: ${message.fromMe}, nội dung: "${message.body}"`);
       
       const monitoredRaw = process.env.MONITORED_PHONES || '';
       if (!monitoredRaw) {
@@ -71,9 +84,20 @@ export function startWhatsAppClient() {
       }
 
       const monitoredPhones = monitoredRaw.split(',').map(p => p.trim().replace(/\D/g, ''));
-      const contact = await message.getContact();
-      const senderPhone = (contact.number || message.from.split('@')[0]).trim();
-      console.log(`[WhatsApp Debug] Giải mã số điện thoại người gửi thành công: "${senderPhone}" (từ JID: ${message.from})`);
+      
+      // Xác định số điện thoại người gửi
+      let senderPhone = '';
+      if (message.fromMe) {
+        // Nếu là tin nhắn gửi đi từ chính tài khoản đang đăng nhập
+        senderPhone = client.info && client.info.wid ? client.info.wid.user : '';
+      } else {
+        // Nếu là tin nhắn nhận được
+        const contact = await message.getContact();
+        senderPhone = contact.number || message.from.split('@')[0];
+      }
+      senderPhone = senderPhone.replace(/\D/g, '').trim();
+
+      console.log(`[WhatsApp Debug] Số điện thoại người gửi giải mã: "${senderPhone}"`);
 
       // Kiểm tra xem tin nhắn có gửi từ các số điện thoại đang theo dõi hay không
       if (!monitoredPhones.includes(senderPhone)) {
@@ -94,25 +118,30 @@ export function startWhatsAppClient() {
       console.log('[WhatsApp] Kết quả phân tích từ AI:', leadInfo);
 
       // Thêm học viên mới vào Supabase với trạng thái 'Contacted'
-      const { data: newLead, error } = await supabase
-        .from('leads')
-        .insert([{
-          name: leadInfo.name,
-          age: leadInfo.age,
-          phone: leadInfo.phone,
-          level: leadInfo.level,
-          status: 'Contacted',
-          notes: `[Tự động từ WhatsApp nguồn ${senderPhone}] ${leadInfo.notes}`
-        }])
-        .select()
-        .single();
+      let newLead = null;
+      try {
+        const { data, error } = await supabase
+          .from('leads')
+          .insert([{
+            name: leadInfo.name,
+            age: leadInfo.age,
+            phone: leadInfo.phone,
+            level: leadInfo.level,
+            status: 'Contacted',
+            notes: `[Tự động từ WhatsApp nguồn ${senderPhone}] ${leadInfo.notes}`
+          }])
+          .select()
+          .single();
 
-      if (error || !newLead) {
-        console.error('[WhatsApp] Lỗi lưu lead mới vào Supabase:', error);
-        return;
+        if (error) {
+          console.error('[WhatsApp] Lỗi lưu lead mới vào Supabase:', error);
+        } else {
+          newLead = data;
+          console.log('[WhatsApp] Đã lưu học viên mới vào database với ID:', newLead?.id);
+        }
+      } catch (dbErr) {
+        console.error('[WhatsApp] Ngoại lệ khi lưu database:', dbErr);
       }
-
-      console.log('[WhatsApp] Đã lưu học viên mới vào database với ID:', newLead.id);
 
       // Tự động kết bạn và gửi tin nhắn chào mừng qua WhatsApp cho học viên
       const studentJid = formatWhatsappJid(leadInfo.phone);
@@ -122,6 +151,7 @@ export function startWhatsAppClient() {
         const studentContact = await client.getContactById(studentJid);
         if (studentContact && studentContact.isMyContact) {
           console.log(`[WhatsApp] Học viên (${leadInfo.phone}) đã có sẵn trong danh bạ HLV.`);
+          console.log('đã có trong danh bạ'); // In đúng yêu cầu: "in ra đã có trong danh bạ"
           contactStatus = 'Học viên đã có sẵn trong danh bạ (Hệ thống không gửi lại tin nhắn giới thiệu)';
         } else {
           console.log(`[WhatsApp] Học viên (${leadInfo.phone}) chưa có trong danh bạ HLV. Tiến hành gửi tin nhắn chào mừng...`);
