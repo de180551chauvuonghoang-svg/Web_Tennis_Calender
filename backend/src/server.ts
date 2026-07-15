@@ -494,7 +494,8 @@ app.listen(PORT, () => {
     console.error('[Server] Lỗi khi khởi chạy WhatsApp Client:', err);
   }
 });
-// Trigger reload: fix isMyContact bug using getContacts
+// Trigger reload: refine contacts check by filtering for actual phonebook contacts
+
 
 
 

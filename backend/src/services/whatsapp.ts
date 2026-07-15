@@ -152,21 +152,15 @@ export function startWhatsAppClient() {
 
       try {
         const contacts = await client.getContacts();
-        const isSavedInContacts = contacts.some(c => c.id._serialized === studentJid);
         
-        let isSaved = isSavedInContacts;
-        
-        try {
-          const studentContact = await client.getContactById(studentJid);
-          if (studentContact) {
-            // Nếu contact có thuộc tính name hợp lệ (khác với số điện thoại) thì coi như đã lưu
-            if (studentContact.name && studentContact.name !== studentContact.number) {
-              isSaved = true;
-            }
-          }
-        } catch (err) {
-          console.error('[WhatsApp] Lỗi khi getContactById:', err);
-        }
+        // Kiểm tra xem số này có thực sự được lưu trong danh bạ hay chưa
+        const isSaved = contacts.some(c => {
+          if (c.id._serialized !== studentJid) return false;
+          
+          // Kiểm tra xem có phải là contact của tôi (isMyContact) hoặc có tên lưu trong danh bạ (khác với số điện thoại)
+          const hasSavedName = c.name && c.name.trim() !== '' && c.name.trim() !== c.number;
+          return c.isMyContact === true || !!hasSavedName;
+        });
 
         if (isSaved) {
           console.log(`[WhatsApp] Học viên (${leadInfo.phone}) đã có sẵn trong danh bạ HLV.`);
