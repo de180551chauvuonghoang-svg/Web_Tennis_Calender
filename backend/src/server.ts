@@ -494,3 +494,5 @@ app.listen(PORT, () => {
     console.error('[Server] Lỗi khi khởi chạy WhatsApp Client:', err);
   }
 });
+// Trigger reload: update monitored phones LID JID
+
