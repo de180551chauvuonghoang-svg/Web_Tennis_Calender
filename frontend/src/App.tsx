@@ -614,11 +614,32 @@ export default function App() {
     <div style={{ paddingBottom: '60px' }}>
       {/* Header / Navbar */}
       <header className="glass" style={{ margin: '20px auto', maxWidth: '1200px', width: '95%', padding: '15px 30px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <img src="/logo.png" alt="Web Tennis Logo" style={{ width: '42px', height: '42px', objectFit: 'contain', borderRadius: '50%', boxShadow: '0 0 12px var(--accent-glow)' }} />
+        <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+          <div style={{ 
+            position: 'relative',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '3px',
+            borderRadius: '50%',
+            background: 'linear-gradient(135deg, var(--accent-color) 0%, rgba(255,255,255,0.05) 100%)',
+            boxShadow: '0 0 15px var(--accent-glow)',
+          }}>
+            <img 
+              src="/logo.png" 
+              alt="Web Tennis Logo" 
+              style={{ 
+                width: '54px', 
+                height: '54px', 
+                objectFit: 'contain', 
+                borderRadius: '50%',
+                backgroundColor: '#0c101b',
+              }} 
+            />
+          </div>
           <div>
-            <h1 style={{ fontSize: '20px', fontWeight: '800', letterSpacing: '0.5px' }}>{t.title}</h1>
-            <span style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>{t.subtitle}</span>
+            <h1 style={{ fontSize: '22px', fontWeight: '900', letterSpacing: '0.5px', color: '#fff', lineHeight: '1.2' }}>{t.title}</h1>
+            <span style={{ fontSize: '11px', color: 'var(--text-secondary)', display: 'block', marginTop: '2px', fontWeight: '500' }}>{t.subtitle}</span>
           </div>
         </div>
 
