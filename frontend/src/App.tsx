@@ -615,7 +615,7 @@ export default function App() {
       {/* Header / Navbar */}
       <header className="glass" style={{ margin: '20px auto', maxWidth: '1200px', width: '95%', padding: '15px 30px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <div style={{ backgroundColor: 'var(--accent-color)', color: '#000', borderRadius: '50%', width: '40px', height: '40px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '800', fontSize: '20px', boxShadow: '0 0 15px var(--accent-glow)' }}>🎾</div>
+          <img src="/logo.png" alt="Web Tennis Logo" style={{ width: '42px', height: '42px', objectFit: 'contain', borderRadius: '50%', boxShadow: '0 0 12px var(--accent-glow)' }} />
           <div>
             <h1 style={{ fontSize: '20px', fontWeight: '800', letterSpacing: '0.5px' }}>{t.title}</h1>
             <span style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>{t.subtitle}</span>
