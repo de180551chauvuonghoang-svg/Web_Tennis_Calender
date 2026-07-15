@@ -94,6 +94,7 @@ interface LessonNotificationDetails {
   endTime: string;
   notes?: string;
   court?: string;
+  courtAddress?: string;
   mapsLink?: string;
 }
 
@@ -118,6 +119,8 @@ export async function sendDiscordBookingNotification(details: LessonNotification
       { name: '⏱️ Thời lượng', value: `${duration} phút`, inline: true },
       { name: '📍 Địa điểm / Sân tập', value: details.court || 'Chưa xác định', inline: true },
       { name: '🗺️ Bản đồ Google Maps', value: details.mapsLink ? `[Bấm để mở Bản đồ](${details.mapsLink})` : 'Không có', inline: true },
+      { name: '\u200b', value: '\u200b', inline: true },
+      ...(details.courtAddress ? [{ name: '📋 Địa chỉ đầy đủ (copy)', value: `\`\`\`\n${details.courtAddress}\n\`\`\``, inline: false }] : []),
       { name: '📝 Ghi chú lịch dạy', value: details.notes || 'Không có ghi chú', inline: false }
     ],
     footer: {
@@ -145,6 +148,8 @@ export async function sendDiscordReminderNotification(details: LessonNotificatio
       { name: '⏱️ Thời lượng tập', value: `${duration} phút`, inline: true },
       { name: '📍 Sân tập', value: details.court || 'Chưa xác định', inline: true },
       { name: '🗺️ Bản đồ Google Maps', value: details.mapsLink ? `[Bấm để mở Bản đồ](${details.mapsLink})` : 'Không có', inline: true },
+      { name: '\u200b', value: '\u200b', inline: true },
+      ...(details.courtAddress ? [{ name: '📋 Địa chỉ đầy đủ (copy)', value: `\`\`\`\n${details.courtAddress}\n\`\`\``, inline: false }] : []),
       { name: '📞 Liên hệ nhanh', value: `${details.platform || 'Zalo'}: ${details.phone}`, inline: false },
       { name: '📝 Ghi chú cần lưu ý', value: details.notes || 'Không có ghi chú', inline: false }
     ],

@@ -46,6 +46,14 @@ export function startScheduler() {
             continue;
           }
 
+          // Resolve địa chỉ đầy đủ theo tên sân
+          const COURT_ADDRESSES: Record<string, string> = {
+            'Hào Anh tennis Coffee': 'Tennis & Coffee Hào Anh Hội An, V8JV+W45, Lý Thường Kiệt, Hội An Đông, Đà Nẵng, Vietnam',
+            'Sân Victoria resort': 'V9W9+8GM Hoi An Dong, Da Nang, Vietnam',
+          };
+          const courtName = (lesson as any).court || 'Chưa xác định';
+          const courtAddress = COURT_ADDRESSES[courtName] || courtName;
+
           // Gửi thông báo đến Discord
           await sendDiscordReminderNotification({
             studentName: lead.name,
@@ -55,7 +63,8 @@ export function startScheduler() {
             startTime: lesson.start_time,
             endTime: lesson.end_time,
             notes: lead.notes || '',
-            court: (lesson as any).court || 'Chưa xác định',
+            court: courtName,
+            courtAddress: courtAddress,
             mapsLink: (lesson as any).maps_link || ''
           });
 

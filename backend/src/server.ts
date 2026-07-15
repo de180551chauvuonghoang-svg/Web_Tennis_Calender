@@ -382,6 +382,7 @@ app.post('/api/lessons', async (req: Request, res: Response) => {
       endTime,
       notes: lead.notes,
       court: court || 'Chưa xác định',
+      courtAddress: courtAddress || undefined,
       mapsLink: mapsLink
     }).catch(err => console.error('[Discord Webhook Bg Error]', err));
 
