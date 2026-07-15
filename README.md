@@ -1,37 +1,40 @@
-# Web Tennis Calendar
+# 🎾 Web Tennis Calendar
 
-Ứng dụng web quản lý lịch đặt sân và lịch tập luyện Tennis. Đây là dự án mới được xây dựng để cung cấp giải pháp đặt sân, đặt lịch hẹn và theo dõi các trận đấu/buổi học tennis một cách tiện lợi trực quan.
+Hệ thống quản lý thông tin học viên đăng ký học thử và tự động lên lịch tập Tennis, đồng bộ dữ liệu đa kênh (Supabase, Google Sheets, Google Calendar, Discord Webhook).
 
-## 🌟 Tính năng chính (Dự kiến)
+## 🚀 Hướng dẫn chạy môi trường Local (Development)
 
-- **Đặt lịch trực tuyến**: Cho phép người chơi đăng ký giờ chơi, chọn sân và đặt lịch huấn luyện viên trực tiếp trên web.
-- **Quản lý lịch sân**: Giao diện lịch trực quan (Calendar View) hiển thị trạng thái trống/bận của từng sân theo thời gian thực.
-- **Thông báo nhắc nhở**: Gửi thông báo xác nhận đặt sân thành công và nhắc nhở trước giờ chơi.
-- **Quản lý hội viên**: Lưu trữ thông tin khách hàng, lịch sử đặt sân và thống kê thời gian chơi.
-
-## 🛠️ Công nghệ sử dụng (Dự kiến)
-
-- **Frontend**: HTML5, CSS3, JavaScript (hoặc các framework như React/Next.js).
-- **Backend**: Node.js / Express hoặc các nền tảng Backend-as-a-Service như Supabase/Firebase.
-- **Database**: PostgreSQL / MySQL để lưu trữ thông tin đặt sân và người dùng.
-
-## ⚙️ Hướng dẫn cài đặt (Phát triển)
-
-1. **Clone dự án**:
+1. Cài đặt toàn bộ dependencies ở cả thư mục root:
    ```bash
-   git clone https://github.com/de180551chauvuonghoang-svg/Web_Tennis_Calender.git
-   cd Web_Tennis_Calender
+   npm run install:all
    ```
-
-2. **Cài đặt các gói phụ thuộc (khi có package.json)**:
-   ```bash
-   npm install
-   ```
-
-3. **Khởi chạy chế độ phát triển**:
+2. Cấu hình file `.env` trong thư mục `backend/.env` với đầy đủ thông tin khóa API cần thiết.
+3. Chạy chế độ phát triển đồng thời cả frontend & backend:
    ```bash
    npm run dev
    ```
 
 ---
-*Dự án đang trong quá trình khởi tạo và phát triển.*
+
+## 🚀 Hướng dẫn Deploy lên Production (Render / Node.js Host)
+
+Dự án đã được cấu hình theo mô hình **Monolith** tối ưu nhất, cả Frontend và Backend sẽ được đóng gói chung và chạy trên duy nhất 1 Web Service để tiết kiệm chi phí và tránh lỗi CORS.
+
+### Bước 1: Tạo Web Service mới trên Render
+1. Truy cập **Render.com**, kết nối tài khoản GitHub của bạn.
+2. Chọn repo `Web_Tennis_Calender`.
+3. Điền cấu hình:
+   - **Build Command**: `npm run build`
+   - **Start Command**: `npm start`
+
+### Bước 2: Điền các biến cấu hình (Environment Variables)
+Sao chép các biến cấu hình từ `backend/.env` sang phần cấu hình Environment trên Render:
+- `SUPABASE_URL`, `SUPABASE_KEY`
+- `GROQ_API_KEY`
+- `GOOGLE_CALENDAR_ID`, `GOOGLE_SHEETS_ID`
+- `GOOGLE_CLIENT_EMAIL`, `GOOGLE_PRIVATE_KEY` (bỏ dấu nháy kép ở đầu và cuối key)
+- `DISCORD_WEBHOOK_URL`
+- `ADMIN_PASSWORD` (mật khẩu trang quản trị)
+
+### Bước 3: Hoàn tất
+Bấm **Create Web Service**. Khi Render build hoàn tất, dự án của bạn sẽ hoạt động hoàn toàn tự động trực tuyến và đồng bộ đa kênh!

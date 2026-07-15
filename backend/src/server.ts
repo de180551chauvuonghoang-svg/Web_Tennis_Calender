@@ -17,7 +17,23 @@ const app = express();
 const PORT = process.env.PORT || 3001;
 
 // Cấu hình Middleware
-app.use(cors());
+const allowedOrigins = [
+  'http://localhost:5173',
+  'http://localhost:4173',
+  process.env.ALLOWED_ORIGIN, // URL Vercel production (đặt trong .env)
+].filter(Boolean) as string[];
+
+app.use(cors({
+  origin: (origin, callback) => {
+    // Cho phép requests không có origin (mobile apps, Postman, curl)
+    if (!origin) return callback(null, true);
+    // Cho phép tất cả *.vercel.app
+    if (origin.endsWith('.vercel.app')) return callback(null, true);
+    if (allowedOrigins.includes(origin)) return callback(null, true);
+    callback(new Error(`CORS blocked: ${origin}`));
+  },
+  credentials: true
+}));
 app.use(express.json());
 
 // Cấu hình Multer để lưu ảnh trong Memory Buffer (phục vụ OCR)
@@ -425,6 +441,19 @@ app.post('/api/ocr', upload.single('image'), async (req: Request, res: Response)
     console.error('[API OCR Error]', err);
     return res.status(500).json({ error: 'Gặp lỗi trong quá trình xử lý OCR.' });
   }
+});
+
+
+// Serving frontend built files in production environment
+const frontendDistPath = path.resolve(__dirname, '../../frontend/dist');
+app.use(express.static(frontendDistPath));
+
+// For routing support (Vite single page app index fallback)
+app.get('*', (req, res, next) => {
+  if (req.path.startsWith('/api')) {
+    return next();
+  }
+  res.sendFile(path.join(frontendDistPath, 'index.html'));
 });
 
 // ==================== KHỞI CHẠY SERVER ====================
