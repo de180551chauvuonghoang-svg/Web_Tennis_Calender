@@ -262,11 +262,19 @@ export default function App() {
   // File Upload Ref
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Fetch leads and coaches on admin dashboard load
+  // Pre-fetch coaches & warm up Render backend on app mount
+  useEffect(() => {
+    // Background ping to wake up Render (fire-and-forget)
+    fetch(API_BASE.replace('/api', '')).catch(() => {});
+    
+    // Pre-fetch coaches early so they are ready for the scheduler form & dashboard
+    fetchCoaches();
+  }, []);
+
+  // Fetch leads on admin dashboard load
   useEffect(() => {
     if (view === 'admin' && isLoggedIn) {
       fetchLeads();
-      fetchCoaches();
     }
   }, [view, isLoggedIn]);
 
