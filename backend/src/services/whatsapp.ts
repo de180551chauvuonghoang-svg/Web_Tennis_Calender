@@ -147,6 +147,9 @@ export function startWhatsAppClient() {
       const studentJid = formatWhatsappJid(leadInfo.phone);
       let contactStatus = 'Đã tự động gửi tin nhắn chào mừng qua WhatsApp';
 
+      const studentName = (!leadInfo.name || leadInfo.name === 'Học viên WhatsApp') ? 'mate' : leadInfo.name;
+      const welcomeMessage = `Hello ${studentName}, I am the Coach Hoang Jayce. Our partner has referred your information to us. Could you share what level of tennis you are interested in (beginner or advanced), and which the free time and many lesson you would like to train in?`;
+
       try {
         const studentContact = await client.getContactById(studentJid);
         if (studentContact && studentContact.isMyContact) {
@@ -155,13 +158,11 @@ export function startWhatsAppClient() {
           contactStatus = 'Học viên đã có sẵn trong danh bạ (Hệ thống không gửi lại tin nhắn giới thiệu)';
         } else {
           console.log(`[WhatsApp] Học viên (${leadInfo.phone}) chưa có trong danh bạ HLV. Tiến hành gửi tin nhắn chào mừng...`);
-          const welcomeMessage = `Hello ${leadInfo.name}, I am the Coach Hoang Jayce. Our partner has referred your information to us. Could you share what level of tennis you are interested in (beginner or advanced), and which the free time and many lesson you would like to train in ?`;
           await client.sendMessage(studentJid, welcomeMessage);
           console.log(`[WhatsApp] Đã gửi tin nhắn chào mừng thành công tới học viên (${leadInfo.phone})`);
         }
       } catch (contactErr) {
         console.error('[WhatsApp] Lỗi khi check danh bạ học viên, mặc định gửi tin chào mừng:', contactErr);
-        const welcomeMessage = `Hello ${leadInfo.name}, I am the Coach Hoang Jayce. Our partner has referred your information to us. Could you share what level of tennis you are interested in (beginner or advanced), and which the free time and many lesson you would like to train in ?`;
         await client.sendMessage(studentJid, welcomeMessage);
       }
 

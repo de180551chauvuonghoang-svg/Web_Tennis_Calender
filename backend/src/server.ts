@@ -494,5 +494,6 @@ app.listen(PORT, () => {
     console.error('[Server] Lỗi khi khởi chạy WhatsApp Client:', err);
   }
 });
-// Trigger reload: update monitored phones LID JID
+// Trigger reload: update introduction message template to use mate
+
 
