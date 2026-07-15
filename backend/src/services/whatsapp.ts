@@ -116,17 +116,31 @@ export function startWhatsAppClient() {
 
       // Tự động kết bạn và gửi tin nhắn chào mừng qua WhatsApp cho học viên
       const studentJid = formatWhatsappJid(leadInfo.phone);
-      const welcomeMessage = `Hello ${leadInfo.name}, I am the Coach Hoang Jayce. Our partner has referred your information to us. Could you share what level of tennis you are interested in (beginner or advanced), and which the free time and many lesson you would like to train in ?`;
+      let contactStatus = 'Đã tự động gửi tin nhắn chào mừng qua WhatsApp';
 
-      await client.sendMessage(studentJid, welcomeMessage);
-      console.log(`[WhatsApp] Đã gửi tin nhắn chào mừng thành công tới học viên (${leadInfo.phone})`);
+      try {
+        const studentContact = await client.getContactById(studentJid);
+        if (studentContact && studentContact.isMyContact) {
+          console.log(`[WhatsApp] Học viên (${leadInfo.phone}) đã có sẵn trong danh bạ HLV.`);
+          contactStatus = 'Học viên đã có sẵn trong danh bạ (Hệ thống không gửi lại tin nhắn giới thiệu)';
+        } else {
+          console.log(`[WhatsApp] Học viên (${leadInfo.phone}) chưa có trong danh bạ HLV. Tiến hành gửi tin nhắn chào mừng...`);
+          const welcomeMessage = `Hello ${leadInfo.name}, I am the Coach Hoang Jayce. Our partner has referred your information to us. Could you share what level of tennis you are interested in (beginner or advanced), and which the free time and many lesson you would like to train in ?`;
+          await client.sendMessage(studentJid, welcomeMessage);
+          console.log(`[WhatsApp] Đã gửi tin nhắn chào mừng thành công tới học viên (${leadInfo.phone})`);
+        }
+      } catch (contactErr) {
+        console.error('[WhatsApp] Lỗi khi check danh bạ học viên, mặc định gửi tin chào mừng:', contactErr);
+        const welcomeMessage = `Hello ${leadInfo.name}, I am the Coach Hoang Jayce. Our partner has referred your information to us. Could you share what level of tennis you are interested in (beginner or advanced), and which the free time and many lesson you would like to train in ?`;
+        await client.sendMessage(studentJid, welcomeMessage);
+      }
 
       // Gửi thông báo đến Discord để báo tin cho HLV biết
       const discordNotifyText = `📢 **HỌC VIÊN MỚI TỰ ĐỘNG TỪ WHATSAPP**\n` +
         `👤 **Họ tên**: ${leadInfo.name}\n` +
         `📞 **Số điện thoại**: ${leadInfo.phone}\n` +
         `📘 **Nền tảng mong muốn**: ${leadInfo.platform}\n` +
-        `✅ **Trạng thái**: Đã tự động gửi tin nhắn chào mừng giới thiệu qua WhatsApp!\n` +
+        `✅ **Trạng thái**: ${contactStatus}\n` +
         `📝 **Nội dung tin gốc**: *"${message.body}"*`;
 
       // Gửi webhook dạng text đơn giản hoặc qua kênh Discord
@@ -137,7 +151,7 @@ export function startWhatsAppClient() {
         fields: [
           { name: '👤 Học viên', value: leadInfo.name, inline: true },
           { name: '📞 Số điện thoại', value: leadInfo.phone, inline: true },
-          { name: '⚡ Trạng thái', value: 'Đã tự động nhắn tin chào mừng qua WhatsApp', inline: false },
+          { name: '⚡ Trạng thái', value: contactStatus, inline: false },
           { name: '📝 Ghi chú', value: leadInfo.notes, inline: false }
         ],
         footer: {
