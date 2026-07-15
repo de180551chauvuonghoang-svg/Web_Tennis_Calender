@@ -173,12 +173,11 @@ export function startDiscordBot() {
           start_time: startTimeStr,
           end_time: endTimeStr,
           google_event_id: calendarResult.eventId,
-          reminder_sent: false,
-          court: bookingInfo.court,
-          maps_link: mapsLink
+          reminder_sent: false
         }])
         .select()
         .single();
+
 
       if (lessonError || !newLesson) {
         console.error('[Discord Bot] Lỗi khi tạo lesson:', lessonError);
