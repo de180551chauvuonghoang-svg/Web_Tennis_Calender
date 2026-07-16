@@ -22,6 +22,7 @@ CREATE TABLE lessons (
     end_time TIMESTAMPTZ NOT NULL,
     google_event_id TEXT,
     reminder_sent BOOLEAN DEFAULT false,
+    completed BOOLEAN DEFAULT false, -- Đã đánh dấu hoàn thành buổi học
     created_at TIMESTAMPTZ DEFAULT now()
 );
 

@@ -119,3 +119,24 @@ export async function updateCalendarEventColor(eventId: string, colorId: string)
     console.error('[Google Calendar] Lỗi khi cập nhật màu sắc:', error);
   }
 }
+
+/**
+ * Đánh dấu sự kiện hoàn thành trên Google Calendar bằng cách đổi màu thành màu xám và thêm tiền tố [ĐÃ HOÀN THÀNH] vào tiêu đề
+ */
+export async function markCalendarEventCompleted(eventId: string, studentName: string, coachName: string, sessionText: string): Promise<void> {
+  try {
+    const summary = `✅ [ĐÃ HOÀN THÀNH] Lịch tập Tennis: ${studentName} (${sessionText}) [HLV: ${coachName}]`;
+    await calendar.events.patch({
+      calendarId: calendarId,
+      eventId: eventId,
+      requestBody: {
+        summary: summary,
+        colorId: '8' // Màu xám Graphite chỉ thị đã hoàn thành
+      }
+    });
+    console.log(`[Google Calendar] Đã đánh dấu hoàn thành cho sự kiện ${eventId}`);
+  } catch (error) {
+    console.error('[Google Calendar] Lỗi khi đánh dấu hoàn thành sự kiện:', error);
+  }
+}
+
