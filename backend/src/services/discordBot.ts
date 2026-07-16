@@ -57,39 +57,45 @@ export function startDiscordBot() {
     try {
       const currentDateStr = new Date().toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' });
       
-      // Gọi Groq AI để phân tích tin nhắn tự nhiên thành cấu trúc
-      const bookingInfo = await parseDiscordBooking(content, currentDateStr);
-      console.log('[Discord Bot] Kết quả phân tích từ AI:', bookingInfo);
+      // Gọi Groq AI để phân tích tin nhắn tự nhiên thành cấu trúc danh sách
+      const bookings = await parseDiscordBooking(content, currentDateStr);
+      console.log('[Discord Bot] Kết quả phân tích từ AI:', bookings);
 
-      if (!bookingInfo.studentName && !bookingInfo.studentPhone) {
+      if (!bookings || bookings.length === 0) {
+        await statusMsg.edit('❌ **AI không thể trích xuất được bất kỳ lịch học nào từ tin nhắn. Vui lòng kiểm tra lại cú pháp!**');
+        return;
+      }
+
+      const firstBooking = bookings[0];
+      if (!firstBooking.studentName && !firstBooking.studentPhone) {
         await statusMsg.edit('❌ **AI không thể trích xuất được tên hoặc số điện thoại học viên từ tin nhắn. Vui lòng thử lại với tên hoặc số điện thoại rõ ràng hơn!**');
         return;
       }
 
       let lead = null;
 
-      // 1. Chỉ tìm theo tên nếu studentName thực sự có giá trị (tránh việc chuỗi rỗng match bản ghi đầu tiên)
-      if (bookingInfo.studentName && bookingInfo.studentName.trim() !== '') {
+      // 1. Tìm học viên theo tên
+      if (firstBooking.studentName && firstBooking.studentName.trim() !== '') {
         const { data } = await supabase
           .from('leads')
           .select('*')
-          .ilike('name', `%${bookingInfo.studentName}%`)
+          .ilike('name', `%${firstBooking.studentName}%`)
           .limit(1)
           .maybeSingle();
         lead = data;
       }
 
       // Nếu không tìm thấy bằng tên và có số điện thoại, thì tìm bằng SĐT
-      if (!lead && bookingInfo.studentPhone) {
-        console.log(`[Discord Bot] Thử tìm học viên bằng SĐT: ${bookingInfo.studentPhone}`);
-        const phoneQuery = bookingInfo.studentPhone.startsWith('84')
-          ? bookingInfo.studentPhone
-          : '84' + bookingInfo.studentPhone.replace(/^0/, '');
+      if (!lead && firstBooking.studentPhone) {
+        console.log(`[Discord Bot] Thử tìm học viên bằng SĐT: ${firstBooking.studentPhone}`);
+        const phoneQuery = firstBooking.studentPhone.startsWith('84')
+          ? firstBooking.studentPhone
+          : '84' + firstBooking.studentPhone.replace(/^0/, '');
         
         const altResult = await supabase
           .from('leads')
           .select('*')
-          .or(`phone.ilike.%${bookingInfo.studentPhone}%,phone.ilike.%${phoneQuery}%`)
+          .or(`phone.ilike.%${firstBooking.studentPhone}%,phone.ilike.%${phoneQuery}%`)
           .limit(1)
           .maybeSingle();
         lead = altResult.data;
@@ -100,14 +106,14 @@ export function startDiscordBot() {
 
       // Nếu vẫn không tìm thấy, tự động tạo lead mới làm fallback
       if (!lead) {
-        const fallbackName = bookingInfo.studentName || `Khách hàng ${bookingInfo.studentPhone}`;
+        const fallbackName = firstBooking.studentName || `Khách hàng ${firstBooking.studentPhone}`;
         console.log(`[Discord Bot] Không tìm thấy học viên, tự động tạo mới lead "${fallbackName}"...`);
         const { data: newLead, error: createError } = await supabase
           .from('leads')
           .insert([{
             name: fallbackName,
             age: null,
-            phone: bookingInfo.studentPhone || 'Không có SĐT (Tạo từ Discord Bot)',
+            phone: firstBooking.studentPhone || 'Không có SĐT (Tạo từ Discord Bot)',
             level: 'Basic',
             status: 'Contacted',
             notes: `[Tạo tự động từ Discord Bot chat của HLV ${message.author.username}]`
@@ -123,145 +129,168 @@ export function startDiscordBot() {
         lead = newLead;
       }
 
-      // 1.5. Cập nhật ngay thông tin total_sessions và completed_sessions (số buổi hiện tại) nếu có
+      // Cập nhật thông tin total_sessions của học viên nếu có giá trị mới lớn hơn
+      const maxTotalSessions = Math.max(...bookings.map(b => b.totalSessions));
+      const maxCurrentSession = Math.max(...bookings.map(b => b.currentSession));
+      
       const updateFields: Record<string, any> = { status: 'Scheduled' };
-      if (bookingInfo.totalSessions > 0) {
-        updateFields.total_sessions = bookingInfo.totalSessions;
-        console.log(`[Discord Bot] Cập nhật tổng số buổi học: ${bookingInfo.totalSessions} cho ${lead.name}`);
+      if (maxTotalSessions > lead.total_sessions) {
+        updateFields.total_sessions = maxTotalSessions;
       }
-      if (bookingInfo.currentSession > 0) {
-        updateFields.completed_sessions = bookingInfo.currentSession;
-        console.log(`[Discord Bot] Cập nhật số buổi đã học: ${bookingInfo.currentSession} cho ${lead.name}`);
+      if (maxCurrentSession > lead.completed_sessions) {
+        // Cập nhật số buổi hiện tại cao nhất
+        updateFields.completed_sessions = maxCurrentSession;
       }
-      const { data: updatedLead, error: updateError } = await supabase
+      
+      const { data: updatedLead } = await supabase
         .from('leads')
         .update(updateFields)
         .eq('id', lead.id)
         .select()
         .single();
         
-      if (!updateError && updatedLead) {
+      if (updatedLead) {
         lead = updatedLead;
       }
 
-      // 2. Tính toán startTime và endTime
-      const start = new Date(bookingInfo.startTime);
-      if (isNaN(start.getTime())) {
-        await statusMsg.edit('❌ **Thời gian bắt đầu không hợp lệ hoặc AI phân tích sai cấu trúc thời gian.**');
+      const results = [];
+
+      // Vòng lặp xử lý từng buổi tập được yêu cầu
+      for (const bookingInfo of bookings) {
+        const start = new Date(bookingInfo.startTime);
+        if (isNaN(start.getTime())) {
+          console.error('[Discord Bot] Lỗi: Thời gian bắt đầu không hợp lệ:', bookingInfo.startTime);
+          continue;
+        }
+        const end = new Date(start.getTime() + bookingInfo.duration * 60 * 1000);
+
+        const startTimeStr = start.toISOString();
+        const endTimeStr = end.toISOString();
+
+        // Kiểm tra xem học viên này đã có lịch trùng giờ bắt đầu này chưa -> Tiến hành thay thế (reschedule)
+        const { data: existingLesson } = await supabase
+          .from('lessons')
+          .select('*')
+          .eq('lead_id', lead.id)
+          .eq('start_time', startTimeStr)
+          .maybeSingle();
+  
+        if (existingLesson) {
+          console.log(`[Discord Bot] Phát hiện lịch học trùng giờ bắt đầu (${startTimeStr}), tiến hành thay thế...`);
+          if (existingLesson.google_event_id) {
+            await deleteCalendarEvent(existingLesson.google_event_id).catch(() => {});
+          }
+          await supabase
+            .from('lessons')
+            .delete()
+            .eq('id', existingLesson.id);
+        }
+
+        const courtInfo = COURT_LOCATIONS[bookingInfo.court] || COURT_LOCATIONS['Hào Anh tennis Coffee'];
+        const mapsLink = courtInfo.mapsLink;
+        const courtAddress = courtInfo.address;
+
+        // Tạo lịch trên Google Calendar cho buổi này
+        const calendarResult = await createCalendarEvent({
+          studentName: lead.name,
+          phone: lead.phone,
+          level: lead.level,
+          coachName: message.author.username,
+          startTime: startTimeStr,
+          endTime: endTimeStr,
+          notes: lead.notes,
+          location: courtAddress,
+          currentSession: bookingInfo.currentSession > 0 ? bookingInfo.currentSession : lead.completed_sessions,
+          totalSessions: bookingInfo.totalSessions > 0 ? bookingInfo.totalSessions : lead.total_sessions
+        });
+
+        // Lưu buổi học mới vào Supabase
+        const { data: newLesson, error: lessonError } = await supabase
+          .from('lessons')
+          .insert([{
+            lead_id: lead.id,
+            coach_name: message.author.username,
+            platform: 'Discord',
+            start_time: startTimeStr,
+            end_time: endTimeStr,
+            google_event_id: calendarResult.eventId,
+            reminder_sent: false
+          }])
+          .select()
+          .single();
+
+        if (lessonError || !newLesson) {
+          console.error('[Discord Bot] Lỗi khi tạo lesson trong Supabase:', lessonError);
+          continue;
+        }
+
+        // Đồng bộ vào Google Sheets đối soát
+        await appendLessonToSheet({
+          studentName: lead.name,
+          phone: lead.phone,
+          coachName: message.author.username,
+          startTime: startTimeStr,
+          duration: bookingInfo.duration,
+          court: bookingInfo.court,
+          mapsLink: mapsLink,
+          createdAt: new Date().toISOString()
+        }).catch(err => console.error('[Discord Bot] Lỗi ghi nhận Sheets:', err));
+
+        results.push({
+          bookingInfo,
+          startTimeStr,
+          mapsLink,
+          courtAddress
+        });
+      }
+
+      if (results.length === 0) {
+        await statusMsg.edit('❌ **Lên lịch thất bại cho tất cả các buổi tập được yêu cầu. Vui lòng kiểm tra lại!**');
         return;
       }
-      const end = new Date(start.getTime() + bookingInfo.duration * 60 * 1000);
 
-      const startTimeStr = start.toISOString();
-      const endTimeStr = end.toISOString();
-
-       // 3. Kiểm tra xem học viên này đã có lịch trùng giờ bắt đầu này chưa -> Tiến hành thay thế (reschedule)
-       const { data: existingLesson } = await supabase
-         .from('lessons')
-         .select('*')
-         .eq('lead_id', lead.id)
-         .eq('start_time', startTimeStr)
-         .maybeSingle();
- 
-       if (existingLesson) {
-         console.log(`[Discord Bot] Phát hiện lịch học trùng giờ bắt đầu (${startTimeStr}), tiến hành thay thế...`);
-         if (existingLesson.google_event_id) {
-           await deleteCalendarEvent(existingLesson.google_event_id).catch(() => {});
-         }
-         await supabase
-           .from('lessons')
-           .delete()
-           .eq('id', existingLesson.id);
-       }
-
-      // 4. Lấy thông tin sân
-      const courtInfo = COURT_LOCATIONS[bookingInfo.court] || COURT_LOCATIONS['Hào Anh tennis Coffee'];
-      const mapsLink = courtInfo.mapsLink;
-      const courtAddress = courtInfo.address;
-
-      // 5. Tạo lịch trên Google Calendar
-      const calendarResult = await createCalendarEvent({
-        studentName: lead.name,
-        phone: lead.phone,
-        level: lead.level,
-        coachName: message.author.username, // Lấy tên HLV chat trên Discord
-        startTime: startTimeStr,
-        endTime: endTimeStr,
-        notes: lead.notes,
-        location: courtAddress,
-        currentSession: bookingInfo.currentSession > 0 ? bookingInfo.currentSession : lead.completed_sessions,
-        totalSessions: bookingInfo.totalSessions > 0 ? bookingInfo.totalSessions : lead.total_sessions
-      });
-
-      // 6. Lưu buổi học mới vào Supabase
-      const { data: newLesson, error: lessonError } = await supabase
-        .from('lessons')
-        .insert([{
-          lead_id: lead.id,
-          coach_name: message.author.username,
-          platform: 'Discord',
-          start_time: startTimeStr,
-          end_time: endTimeStr,
-          google_event_id: calendarResult.eventId,
-          reminder_sent: false
-        }])
-        .select()
-        .single();
-
-
-      if (lessonError || !newLesson) {
-        console.error('[Discord Bot] Lỗi khi tạo lesson:', lessonError);
-        await statusMsg.edit('❌ **Gặp lỗi khi ghi nhận thông tin buổi học vào Cơ sở dữ liệu.**');
-        return;
-      }
-
-      // 7. Cập nhật trạng thái lead đã được làm ở bước 1.5 nên không cần làm lại ở đây
-      
-      // 8. Đồng bộ vào Google Sheets đối soát
-      await appendLessonToSheet({
-        studentName: lead.name,
-        phone: lead.phone,
-        coachName: message.author.username,
-        startTime: startTimeStr,
-        duration: bookingInfo.duration,
-        court: bookingInfo.court,
-        mapsLink: mapsLink,
-        createdAt: new Date().toISOString()
-      }).catch(err => console.error('[Discord Bot] Lỗi ghi nhận Sheets:', err));
-
-      // 9. Gửi phản hồi thành công cùng embed thông báo địa chỉ copy
+      // Gửi phản hồi thành công gom nhóm các buổi tập
       const formatTime = (iso: string) => {
         return new Date(iso).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', hour12: false }) + 
                ' ngày ' + 
                new Date(iso).toLocaleDateString('vi-VN');
       };
 
-      // Lấy thông tin số buổi tập, dùng giá trị vừa phân tích từ tin nhắn làm fallback nếu database chưa lưu được
-      const completedSessions = bookingInfo.currentSession > 0 
-        ? bookingInfo.currentSession 
-        : ((lead as any).completed_sessions || 0);
-        
-      const totalSessions = bookingInfo.totalSessions > 0 
-        ? bookingInfo.totalSessions 
-        : ((lead as any).total_sessions || 0);
+      const fields = [
+        { name: '👤 Học viên', value: lead.name, inline: true }
+      ];
 
-      const sessionsInfo = totalSessions > 0
-        ? `${completedSessions}/${totalSessions} buổi`
-        : (completedSessions > 0 ? `Đã tập ${completedSessions} buổi` : 'Chưa có thông tin');
+      results.forEach((res, index) => {
+        const { bookingInfo, startTimeStr } = res;
+        const currentVal = bookingInfo.currentSession > 0 ? bookingInfo.currentSession : lead.completed_sessions;
+        const totalVal = bookingInfo.totalSessions > 0 ? bookingInfo.totalSessions : lead.total_sessions;
+        const sessionProgress = totalVal > 0 ? `${currentVal}/${totalVal} buổi` : `Buổi ${currentVal}`;
+
+        fields.push({
+          name: `📅 Buổi tập ${results.length > 1 ? index + 1 : ''}`,
+          value: `• **Thời gian:** ${formatTime(startTimeStr)}\n• **Tiến độ:** ${sessionProgress}\n• **Sân:** ${bookingInfo.court}`,
+          inline: false
+        });
+      });
+
+      if (results.length > 0) {
+        fields.push({
+          name: '🗺️ Bản đồ Google Maps',
+          value: `[Bấm để mở Bản đồ](${results[0].mapsLink})`,
+          inline: true
+        });
+        fields.push({
+          name: '📋 Địa chỉ đầy đủ (copy)',
+          value: `\`\`\`\n${results[0].courtAddress}\n\`\`\``,
+          inline: false
+        });
+      }
 
       const successEmbed = {
         title: '🎾 THÀNH CÔNG — TỰ ĐỘNG ĐẶT LỊCH QUA DISCORD BOT',
-        description: `🔔 Buổi tập của học viên **${lead.name}** đã được lên lịch thành công bởi HLV **${message.author.username}**!`,
-        color: 12779284, // Màu Tennis #C2FF14
-        fields: [
-          { name: '👤 Học viên', value: lead.name, inline: true },
-          { name: '⏰ Thời gian bắt đầu', value: formatTime(startTimeStr), inline: true },
-          { name: '⏱️ Thời lượng', value: `${bookingInfo.duration} phút`, inline: true },
-          { name: '📊 Tiến độ buổi học', value: sessionsInfo, inline: true },
-          { name: '📍 Địa điểm / Sân tập', value: bookingInfo.court, inline: true },
-          { name: '🗺️ Bản đồ Google Maps', value: `[Bấm để mở Bản đồ](${mapsLink})`, inline: true },
-          { name: '📋 Địa chỉ đầy đủ (copy)', value: `\`\`\`\n${courtAddress}\n\`\`\``, inline: false }
-        ],
+        description: `🔔 Đã lên lịch thành công **${results.length} buổi tập** của học viên **${lead.name}** bởi HLV **${message.author.username}**!`,
+        color: 12779284,
+        fields: fields,
         footer: {
           text: `Tennis AI Sales Assistant - Tạo lịch qua Discord`
         }
