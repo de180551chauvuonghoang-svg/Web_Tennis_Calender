@@ -82,9 +82,9 @@ function buildDescriptionHtml(details: EventDetails, status: 'pending' | 'in_pro
 
   return `
 <div style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; padding: 10px; color: #333;">
-  <img src="https://images.unsplash.com/photo-1554068865-24bccd4e34b8?w=600" alt="Tennis" width="100%" style="border-radius: 8px; margin-bottom: 15px;" />
+  <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/4/4b/Tennis_racket_and_balls.jpg/640px-Tennis_racket_and_balls.jpg" alt="Tennis" width="400" />
   
-  <div style="font-size: 14px; line-height: 1.6;">
+  <div style="font-size: 14px; line-height: 1.6; margin-top: 15px;">
     ${detailsHtml}
   </div>
   
