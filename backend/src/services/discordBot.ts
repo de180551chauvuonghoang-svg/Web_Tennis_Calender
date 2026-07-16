@@ -66,17 +66,22 @@ export function startDiscordBot() {
         return;
       }
 
-      // 1. Tìm học viên trong bảng leads - nhậm bằng tên trước, nếu không có thì tìm bằng SĐT
-      let { data: lead, error: leadError } = await supabase
-        .from('leads')
-        .select('*')
-        .ilike('name', `%${bookingInfo.studentName}%`)
-        .limit(1)
-        .maybeSingle();
+      let lead = null;
+
+      // 1. Chỉ tìm theo tên nếu studentName thực sự có giá trị (tránh việc chuỗi rỗng match bản ghi đầu tiên)
+      if (bookingInfo.studentName && bookingInfo.studentName.trim() !== '') {
+        const { data } = await supabase
+          .from('leads')
+          .select('*')
+          .ilike('name', `%${bookingInfo.studentName}%`)
+          .limit(1)
+          .maybeSingle();
+        lead = data;
+      }
 
       // Nếu không tìm thấy bằng tên và có số điện thoại, thì tìm bằng SĐT
       if (!lead && bookingInfo.studentPhone) {
-        console.log(`[Discord Bot] Không tìm thấy bằng tên, thử tìm bằng SĐT: ${bookingInfo.studentPhone}`);
+        console.log(`[Discord Bot] Thử tìm học viên bằng SĐT: ${bookingInfo.studentPhone}`);
         const phoneQuery = bookingInfo.studentPhone.startsWith('84')
           ? bookingInfo.studentPhone
           : '84' + bookingInfo.studentPhone.replace(/^0/, '');
@@ -95,7 +100,7 @@ export function startDiscordBot() {
 
       // Nếu vẫn không tìm thấy, tự động tạo lead mới làm fallback
       if (!lead) {
-        const fallbackName = bookingInfo.studentName || `Học viên SĐT ${bookingInfo.studentPhone}`;
+        const fallbackName = bookingInfo.studentName || `Khách hàng ${bookingInfo.studentPhone}`;
         console.log(`[Discord Bot] Không tìm thấy học viên, tự động tạo mới lead "${fallbackName}"...`);
         const { data: newLead, error: createError } = await supabase
           .from('leads')
@@ -185,11 +190,15 @@ export function startDiscordBot() {
         return;
       }
 
-      // 7. Cập nhật trạng thái lead sang 'Scheduled' và total_sessions nếu có
+      // 7. Cập nhật trạng thái lead sang 'Scheduled', total_sessions và completed_sessions nếu có
       const updateFields: Record<string, any> = { status: 'Scheduled' };
       if (bookingInfo.totalSessions > 0) {
         updateFields.total_sessions = bookingInfo.totalSessions;
         console.log(`[Discord Bot] Cập nhật tổng số buổi học: ${bookingInfo.totalSessions} cho ${lead.name}`);
+      }
+      if (bookingInfo.currentSession > 0) {
+        updateFields.completed_sessions = bookingInfo.currentSession;
+        console.log(`[Discord Bot] Cập nhật số buổi đã học: ${bookingInfo.currentSession} cho ${lead.name}`);
       }
       await supabase
         .from('leads')
