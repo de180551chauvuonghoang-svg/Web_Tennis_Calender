@@ -49,13 +49,15 @@ export async function createCalendarEvent(details: EventDetails): Promise<{ even
       : 'Chưa xác định';
 
     const description = `
-👤 Học viên: ${details.studentName}
-📞 Số điện thoại: ${details.phone}
-📘 Trình độ: ${details.level}
-📊 Tiến độ buổi học: Buổi thứ ${progressText}
-👤 Huấn luyện viên phụ trách: ${details.coachName}
-📍 Địa điểm / Sân tập: ${details.location || 'Chưa xác định'}
-📝 Ghi chú lịch dạy: ${details.notes || 'Không có ghi chú'}
+<b>👤 Học viên:</b> ${details.studentName}<br>
+<b>📞 Số điện thoại:</b> ${details.phone}<br>
+<b>📘 Trình độ:</b> ${details.level}<br>
+<b>📊 Tiến độ buổi học:</b> Buổi thứ ${progressText}<br>
+<b>👤 Huấn luyện viên phụ trách:</b> ${details.coachName}<br>
+<b>📍 Địa điểm / Sân tập:</b> ${details.location || 'Chưa xác định'}<br>
+<b>📝 Ghi chú lịch dạy:</b> ${details.notes || 'Không có ghi chú'}<br>
+<br>
+<img src="https://images.unsplash.com/photo-1554068865-24bccd4e34b8?w=600" alt="Tennis" width="100%" style="border-radius: 8px; margin-top: 10px;" />
     `.trim();
 
     const response = await calendar.events.insert({
