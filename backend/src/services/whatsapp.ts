@@ -8,6 +8,10 @@ import fs from 'fs';
 
 let client: Client;
 
+// Cache LID JID → số điện thoại thực cho các số trong MONITORED_PHONES
+// Được xây dựng khi client sẵn sàng và cập nhật khi phát hiện contact mới
+const lidToPhoneCache = new Map<string, string>();
+
 function formatWhatsappJid(phone: string): string {
   let clean = phone.replace(/\D/g, '');
   if (clean.startsWith('0')) {
@@ -17,6 +21,43 @@ function formatWhatsappJid(phone: string): string {
     clean = '84' + clean;
   }
   return `${clean}@c.us`;
+}
+
+function normalizePhone(p: string): string {
+  const d = p.replace(/\D/g, '');
+  if (d.startsWith('84')) return d;
+  if (d.startsWith('0')) return '84' + d.slice(1);
+  return '84' + d;
+}
+
+/**
+ * Xây dựng cache LID → SĐT bằng cách quét tất cả contacts
+ * và tìm contact nào có SĐT khớp với MONITORED_PHONES
+ */
+async function buildLidPhoneCache() {
+  try {
+    const monitoredRaw = process.env.MONITORED_PHONES || '';
+    if (!monitoredRaw) return;
+    const monitoredNormalized = monitoredRaw.split(',').map(p => normalizePhone(p.trim()));
+
+    const contacts = await client.getContacts();
+    let found = 0;
+    for (const contact of contacts) {
+      const contactNumber = (contact.number || '').replace(/\D/g, '');
+      if (!contactNumber) continue;
+      const contactNorm = normalizePhone(contactNumber);
+      if (monitoredNormalized.includes(contactNorm)) {
+        // Lưu cả JID @lid lẫn @c.us vào cache
+        const serialized = contact.id._serialized;
+        lidToPhoneCache.set(serialized, contactNorm);
+        found++;
+        console.log(`[WhatsApp] Đã map JID "${serialized}" → SĐT theo dõi "${contactNorm}"`);
+      }
+    }
+    console.log(`[WhatsApp] Xây dựng LID cache hoàn tất: ${found} số theo dõi được map.`);
+  } catch (err) {
+    console.error('[WhatsApp] Lỗi khi xây dựng LID cache:', err);
+  }
 }
 
 export function startWhatsAppClient() {
@@ -57,9 +98,11 @@ export function startWhatsAppClient() {
     qrcode.generate(qr, { small: true });
   });
 
-  // Sự kiện sẵn sàng hoạt động
+  // Sự kiện sẵn sàng hoạt động → xây dựng LID cache ngay
   client.on('ready', () => {
     console.log('[WhatsApp] CLIENT ĐÃ SẴN SÀNG HOẠT ĐỘNG! Đang lắng nghe...');
+    // Xây dựng cache LID → SĐT cho các số theo dõi sau 3 giây (để tránh race condition)
+    setTimeout(() => buildLidPhoneCache(), 3000);
   });
 
   // Sự kiện lỗi xác thực
@@ -85,36 +128,47 @@ export function startWhatsAppClient() {
 
       const monitoredPhones = monitoredRaw.split(',').map(p => p.trim().replace(/\D/g, ''));
       
-      // Xác định số điện thoại người gửi thực bằng cách tra cứu contact
-      // (tránh vấn đề JID dạng LID không khớp với số điện thoại thực trong env)
+      // Xác định số điện thoại người gửi thực
+      // Ưu tiên: cache LID → contact.number → JID (nếu @c.us)
       let senderPhone = '';
       if (message.fromMe) {
-        // Tin nhắn gửi đi từ tài khoản đang đăng nhập → lấy số của chính tài khoản đó
+        // Tin nhắn gửi đi từ tài khoản đang đăng nhập
         senderPhone = client.info && client.info.wid ? client.info.wid.user : '';
       } else {
-        // Tin nhắn nhận được → gọi getContact() để lấy số thực (tránh JID dạng LID)
-        try {
-          const contact = await message.getContact();
-          // contact.number là số điện thoại thực (không có @lid hay @c.us)
-          senderPhone = contact.number || '';
-          
-          if (!senderPhone) {
-            // contact.number rỗng thường xảy ra với LID format hoặc contact ẩn danh
-            // Nếu JID dạng @c.us thì bóc số từ JID (vẫn là SĐT thực)
-            // Nếu JID dạng @lid thì KHÔNG dùng LID làm SĐT (sẽ cho kết quả sai)
-            const jid = message.from || '';
-            if (jid.endsWith('@c.us')) {
-              senderPhone = jid.replace('@c.us', '');
+        const fromJid = message.from || '';
+
+        // 1. Kiểm tra cache LID trước (nhanh nhất, không cần gọi API)
+        if (lidToPhoneCache.has(fromJid)) {
+          senderPhone = lidToPhoneCache.get(fromJid)!;
+          console.log(`[WhatsApp Debug] Tìm thấy SĐT từ LID cache: "${senderPhone}"`);
+        } else {
+          // 2. Gọi getContact() để lấy số thực
+          try {
+            const contact = await message.getContact();
+            senderPhone = contact.number || '';
+
+            if (!senderPhone) {
+              // 3. contact.number rỗng → xử lý theo loại JID
+              if (fromJid.endsWith('@c.us')) {
+                senderPhone = fromJid.replace('@c.us', '');
+              } else {
+                // LID format và không có trong cache → bỏ qua
+                console.log(`[WhatsApp Debug] JID dạng LID (${fromJid}) không có trong cache, bỏ qua.`);
+                return;
+              }
             } else {
-              // LID format → không thể xác định SĐT thực → bỏ qua
-              console.log(`[WhatsApp Debug] JID dạng LID (${jid}), không thể xác định SĐT thực. Bỏ qua.`);
-              return;
+              // Nếu contact.number có giá trị, cập nhật cache để lần sau nhanh hơn
+              const phoneNorm = normalizePhone(senderPhone.replace(/\D/g, ''));
+              const monitoredNorm = monitoredPhones.map(p => normalizePhone(p));
+              if (monitoredNorm.includes(phoneNorm)) {
+                lidToPhoneCache.set(fromJid, phoneNorm);
+                console.log(`[WhatsApp Debug] Cập nhật cache: "${fromJid}" → "${phoneNorm}"`);
+              }
             }
+          } catch {
+            senderPhone = fromJid.endsWith('@c.us') ? fromJid.replace('@c.us', '') : '';
+            if (!senderPhone) return;
           }
-        } catch {
-          const jid = message.from || '';
-          senderPhone = jid.endsWith('@c.us') ? jid.replace('@c.us', '') : '';
-          if (!senderPhone) return;
         }
       }
       senderPhone = senderPhone.replace(/\D/g, '').trim();
@@ -122,14 +176,6 @@ export function startWhatsAppClient() {
       console.log(`[WhatsApp Debug] Số điện thoại người gửi giải mã: "${senderPhone}"`);
 
       // Kiểm tra xem số điện thoại thực có nằm trong danh sách theo dõi không
-      // So sánh linh hoạt: vừa khớp trực tiếp, vừa khớp khi thêm/bỏ đầu quốc gia 84
-      const normalizePhone = (p: string) => {
-        const d = p.replace(/\D/g, '');
-        if (d.startsWith('84')) return d;
-        if (d.startsWith('0')) return '84' + d.slice(1);
-        return '84' + d;
-      };
-
       const senderNormalized = normalizePhone(senderPhone);
       const isMonitored = monitoredPhones.some(mp => {
         const mpNorm = normalizePhone(mp);
