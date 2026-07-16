@@ -80,9 +80,10 @@ export function startWhatsAppClient() {
       fs.rmSync('./.wwebjs_auth', { recursive: true, force: true });
       console.log('[WhatsApp] Đã xóa session cũ để in lại mã QR liên kết.');
     }
-  } catch (err) {
-    console.error('[WhatsApp] Lỗi khi xóa session cũ:', err);
+  } catch (err: any) {
+    console.warn(`[WhatsApp] ⚠️ Không thể xóa thư mục session cũ (đang khóa bởi tiến trình cũ): ${err.message}`);
   }
+
 
   client = new Client({
     authStrategy: new LocalAuth({
@@ -255,7 +256,7 @@ export function startWhatsAppClient() {
       }
 
       // Tự động kết bạn và gửi tin nhắn chào mừng qua WhatsApp cho học viên
-      const studentJid = formatWhatsappJid(leadInfo.phone);
+      let studentJid = formatWhatsappJid(leadInfo.phone);
       let contactStatus = '';
 
       const studentName = (!leadInfo.name || leadInfo.name === 'Học viên WhatsApp') ? 'mate' : leadInfo.name;
@@ -274,16 +275,30 @@ export function startWhatsAppClient() {
           console.log(`[WhatsApp] Học viên (${leadInfo.phone}) đã tồn tại trong DB trước đó. Không gửi lại tin chào mừng.`);
           contactStatus = 'Học viên đã được liên hệ trước đó';
         } else {
-          console.log(`[WhatsApp] Chuẩn bị gửi tin chào mừng tới JID: ${studentJid}`);
-          console.log(`[WhatsApp] Nội dung: "${welcomeMessage}"`);
-          await client.sendMessage(studentJid, welcomeMessage);
-          console.log(`[WhatsApp] ✅ Đã gửi tin nhắn chào mừng thành công tới học viên (${leadInfo.phone})`);
-          contactStatus = 'Đã gửi tin nhắn chào mừng thành công';
+          // Resolve JID chính xác từ WhatsApp Server trước khi gửi
+          console.log(`[WhatsApp] Đang tra cứu JID thực tế cho số điện thoại: ${leadInfo.phone}`);
+          const numberId = await (client as any).getNumberId(leadInfo.phone);
+          if (numberId) {
+            studentJid = numberId._serialized;
+            console.log(`[WhatsApp] Tra cứu JID thành công: ${studentJid}`);
+            
+            console.log(`[WhatsApp] Chuẩn bị gửi tin chào mừng tới JID: ${studentJid}`);
+            console.log(`[WhatsApp] Nội dung: "${welcomeMessage}"`);
+            await client.sendMessage(studentJid, welcomeMessage);
+            console.log(`[WhatsApp] ✅ Đã gửi tin nhắn chào mừng thành công tới học viên (${leadInfo.phone})`);
+            contactStatus = 'Đã gửi tin nhắn chào mừng thành công';
+          } else {
+            console.warn(`[WhatsApp] ⚠️ Không tìm thấy tài khoản WhatsApp cho số: ${leadInfo.phone}. Thử gửi trực tiếp tới JID mặc định.`);
+            await client.sendMessage(studentJid, welcomeMessage);
+            console.log(`[WhatsApp] ✅ Đã gửi tin nhắn chào mừng (mặc định) tới học viên (${leadInfo.phone})`);
+            contactStatus = 'Đã gửi tin nhắn chào mừng (mặc định)';
+          }
         }
       } catch (sendErr: any) {
         console.error(`[WhatsApp] ❌ Lỗi khi gửi tin nhắn tới ${studentJid}:`, sendErr?.message || sendErr);
         contactStatus = `Lỗi gửi tin: ${sendErr?.message || 'không xác định'}`;
       }
+
 
 
 
