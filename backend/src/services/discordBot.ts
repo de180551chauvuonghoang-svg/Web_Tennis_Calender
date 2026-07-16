@@ -187,8 +187,8 @@ export function startDiscordBot() {
         endTime: endTimeStr,
         notes: lead.notes,
         location: courtAddress,
-        currentSession: lead.completed_sessions,
-        totalSessions: lead.total_sessions
+        currentSession: bookingInfo.currentSession > 0 ? bookingInfo.currentSession : lead.completed_sessions,
+        totalSessions: bookingInfo.totalSessions > 0 ? bookingInfo.totalSessions : lead.total_sessions
       });
 
       // 6. Lưu buổi học mới vào Supabase
@@ -234,8 +234,15 @@ export function startDiscordBot() {
                new Date(iso).toLocaleDateString('vi-VN');
       };
 
-      const completedSessions = (lead as any).completed_sessions || 0;
-      const totalSessions = (lead as any).total_sessions || 0;
+      // Lấy thông tin số buổi tập, dùng giá trị vừa phân tích từ tin nhắn làm fallback nếu database chưa lưu được
+      const completedSessions = bookingInfo.currentSession > 0 
+        ? bookingInfo.currentSession 
+        : ((lead as any).completed_sessions || 0);
+        
+      const totalSessions = bookingInfo.totalSessions > 0 
+        ? bookingInfo.totalSessions 
+        : ((lead as any).total_sessions || 0);
+
       const sessionsInfo = totalSessions > 0
         ? `${completedSessions}/${totalSessions} buổi`
         : (completedSessions > 0 ? `Đã tập ${completedSessions} buổi` : 'Chưa có thông tin');
