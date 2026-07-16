@@ -107,7 +107,7 @@ export async function createCalendarEvent(details: EventDetails): Promise<{ even
       ? ` (Buổi ${details.currentSession}${details.totalSessions && details.totalSessions > 0 ? '/' + details.totalSessions : ''})`
       : '';
 
-    const summary = `Tennis: ${details.studentName}${sessionSuffix} [HLV: ${details.coachName}]`;
+    const summary = `🟡 [ĐANG CHỜ] Tennis: ${details.studentName}${sessionSuffix} [HLV: ${details.coachName}]`;
     const description = buildDescriptionHtml(details, 'pending');
 
     const response = await calendar.events.insert({
@@ -180,7 +180,7 @@ export async function updateCalendarEventToInProgress(eventId: string, details: 
     const sessionSuffix = details.currentSession && details.currentSession > 0
       ? ` (Buổi ${details.currentSession}${details.totalSessions && details.totalSessions > 0 ? '/' + details.totalSessions : ''})`
       : '';
-    const summary = `Tennis [ĐANG TẬP]: ${details.studentName}${sessionSuffix} [HLV: ${details.coachName}]`;
+    const summary = `🟢 [ĐANG TẬP] Tennis: ${details.studentName}${sessionSuffix} [HLV: ${details.coachName}]`;
     const description = buildDescriptionHtml(details, 'in_progress');
 
     await calendar.events.patch({
@@ -206,7 +206,7 @@ export async function markCalendarEventCompleted(eventId: string, details: Event
     const sessionSuffix = details.currentSession && details.currentSession > 0
       ? ` (Buổi ${details.currentSession}${details.totalSessions && details.totalSessions > 0 ? '/' + details.totalSessions : ''})`
       : '';
-    const summary = `Tennis [ĐÃ HOÀN THÀNH]: ${details.studentName}${sessionSuffix} [HLV: ${details.coachName}]`;
+    const summary = `⚫ [ĐÃ HOÀN THÀNH] Tennis: ${details.studentName}${sessionSuffix} [HLV: ${details.coachName}]`;
     const description = buildDescriptionHtml(details, 'completed');
 
     await calendar.events.patch({
@@ -232,7 +232,7 @@ export async function updateCalendarEventToPending(eventId: string, details: Eve
     const sessionSuffix = details.currentSession && details.currentSession > 0
       ? ` (Buổi ${details.currentSession}${details.totalSessions && details.totalSessions > 0 ? '/' + details.totalSessions : ''})`
       : '';
-    const summary = `Tennis: ${details.studentName}${sessionSuffix} [HLV: ${details.coachName}]`;
+    const summary = `🟡 [ĐANG CHỜ] Tennis: ${details.studentName}${sessionSuffix} [HLV: ${details.coachName}]`;
     const description = buildDescriptionHtml(details, 'pending');
 
     await calendar.events.patch({
