@@ -155,22 +155,24 @@ export function startDiscordBot() {
       const startTimeStr = start.toISOString();
       const endTimeStr = end.toISOString();
 
-      // 3. Kiểm tra xem học viên này đã có lịch cũ chưa -> Xóa lịch cũ trước
-      const { data: existingLesson } = await supabase
-        .from('lessons')
-        .select('*')
-        .eq('lead_id', lead.id)
-        .maybeSingle();
-
-      if (existingLesson) {
-        if (existingLesson.google_event_id) {
-          await deleteCalendarEvent(existingLesson.google_event_id).catch(() => {});
-        }
-        await supabase
-          .from('lessons')
-          .delete()
-          .eq('id', existingLesson.id);
-      }
+       // 3. Kiểm tra xem học viên này đã có lịch trùng giờ bắt đầu này chưa -> Tiến hành thay thế (reschedule)
+       const { data: existingLesson } = await supabase
+         .from('lessons')
+         .select('*')
+         .eq('lead_id', lead.id)
+         .eq('start_time', startTimeStr)
+         .maybeSingle();
+ 
+       if (existingLesson) {
+         console.log(`[Discord Bot] Phát hiện lịch học trùng giờ bắt đầu (${startTimeStr}), tiến hành thay thế...`);
+         if (existingLesson.google_event_id) {
+           await deleteCalendarEvent(existingLesson.google_event_id).catch(() => {});
+         }
+         await supabase
+           .from('lessons')
+           .delete()
+           .eq('id', existingLesson.id);
+       }
 
       // 4. Lấy thông tin sân
       const courtInfo = COURT_LOCATIONS[bookingInfo.court] || COURT_LOCATIONS['Hào Anh tennis Coffee'];
