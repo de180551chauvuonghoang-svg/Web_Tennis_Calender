@@ -260,9 +260,9 @@ export function startDiscordBot() {
 
       // Gửi phản hồi thành công gom nhóm các buổi tập hoặc hiển thị chi tiết 1 buổi
       const formatTime = (iso: string) => {
-        return new Date(iso).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', hour12: false }) + 
+        return new Date(iso).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'Asia/Ho_Chi_Minh' }) + 
                ' ngày ' + 
-               new Date(iso).toLocaleDateString('vi-VN');
+               new Date(iso).toLocaleDateString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' });
       };
 
       const fields: any[] = [];
