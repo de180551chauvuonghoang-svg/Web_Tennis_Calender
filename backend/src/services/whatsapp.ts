@@ -85,25 +85,50 @@ export function startWhatsAppClient() {
 
       const monitoredPhones = monitoredRaw.split(',').map(p => p.trim().replace(/\D/g, ''));
       
-      // Xác định số điện thoại người gửi
+      // Xác định số điện thoại người gửi thực bằng cách tra cứu contact
+      // (tránh vấn đề JID dạng LID không khớp với số điện thoại thực trong env)
       let senderPhone = '';
       if (message.fromMe) {
-        // Nếu là tin nhắn gửi đi từ chính tài khoản đang đăng nhập
+        // Tin nhắn gửi đi từ tài khoản đang đăng nhập → lấy số của chính tài khoản đó
         senderPhone = client.info && client.info.wid ? client.info.wid.user : '';
       } else {
-        // Nếu là tin nhắn nhận được
-        const contact = await message.getContact();
-        senderPhone = contact.number || message.from.split('@')[0];
+        // Tin nhắn nhận được → gọi getContact() để lấy số thực (tránh JID dạng LID)
+        try {
+          const contact = await message.getContact();
+          // contact.number là số điện thoại thực (không có @lid hay @c.us)
+          senderPhone = contact.number || '';
+          if (!senderPhone) {
+            // Fallback: bóc phần số từ JID nếu contact.number rỗng
+            senderPhone = message.from.split('@')[0];
+          }
+        } catch {
+          senderPhone = message.from.split('@')[0];
+        }
       }
       senderPhone = senderPhone.replace(/\D/g, '').trim();
 
       console.log(`[WhatsApp Debug] Số điện thoại người gửi giải mã: "${senderPhone}"`);
 
-      // Kiểm tra xem tin nhắn có gửi từ các số điện thoại đang theo dõi hay không
-      if (!monitoredPhones.includes(senderPhone)) {
-        console.log(`[WhatsApp Debug] Số người gửi "${senderPhone}" không nằm trong danh sách theo dõi [${monitoredPhones.join(', ')}]. Bỏ qua.`);
+      // Kiểm tra xem số điện thoại thực có nằm trong danh sách theo dõi không
+      // So sánh linh hoạt: vừa khớp trực tiếp, vừa khớp khi thêm/bỏ đầu quốc gia 84
+      const normalizePhone = (p: string) => {
+        const d = p.replace(/\D/g, '');
+        if (d.startsWith('84')) return d;
+        if (d.startsWith('0')) return '84' + d.slice(1);
+        return '84' + d;
+      };
+
+      const senderNormalized = normalizePhone(senderPhone);
+      const isMonitored = monitoredPhones.some(mp => {
+        const mpNorm = normalizePhone(mp);
+        return mpNorm === senderNormalized || mp === senderPhone;
+      });
+
+      if (!isMonitored) {
+        console.log(`[WhatsApp Debug] Số người gửi "${senderPhone}" (${senderNormalized}) không nằm trong danh sách theo dõi [${monitoredPhones.join(', ')}]. Bỏ qua.`);
         return;
       }
+
 
       console.log(`[WhatsApp] Nhận được tin nhắn từ nguồn theo dõi (${senderPhone}): "${message.body}"`);
 
