@@ -228,36 +228,36 @@ export function startWhatsAppClient() {
 
       // Tự động kết bạn và gửi tin nhắn chào mừng qua WhatsApp cho học viên
       const studentJid = formatWhatsappJid(leadInfo.phone);
-      let contactStatus = 'Đã tự động gửi tin nhắn chào mừng qua WhatsApp';
+      let contactStatus = '';
 
       const studentName = (!leadInfo.name || leadInfo.name === 'Học viên WhatsApp') ? 'mate' : leadInfo.name;
       const welcomeMessage = `Hello ${studentName}, I am the Coach Hoang Jayce. Our partner has referred your information to us. Could you share what level of tennis you are interested in (beginner or advanced), and which the free time and many lesson you would like to train in?`;
 
+      // Kiểm tra học viên này đã được liên hệ trước đó chưa (bằng cách đếm số lead có cùng SĐT)
       try {
-        const contacts = await client.getContacts();
-        
-        // Kiểm tra xem số này có thực sự được lưu trong danh bạ hay chưa
-        const isSaved = contacts.some(c => {
-          if (c.id._serialized !== studentJid) return false;
-          
-          // Kiểm tra xem có phải là contact của tôi (isMyContact) hoặc có tên lưu trong danh bạ (khác với số điện thoại)
-          const hasSavedName = c.name && c.name.trim() !== '' && c.name.trim() !== c.number;
-          return c.isMyContact === true || !!hasSavedName;
-        });
+        const { count } = await supabase
+          .from('leads')
+          .select('*', { count: 'exact', head: true })
+          .eq('phone', leadInfo.phone);
 
-        if (isSaved) {
-          console.log(`[WhatsApp] Học viên (${leadInfo.phone}) đã có sẵn trong danh bạ HLV.`);
-          console.log('đã có trong danh bạ'); // In đúng yêu cầu: "in ra đã có trong danh bạ"
-          contactStatus = 'Học viên đã có sẵn trong danh bạ (Hệ thống không gửi lại tin nhắn giới thiệu)';
+        const isAlreadyContacted = (count || 0) > 1; // > 1 vì vừa insert xong ở trên
+
+        if (isAlreadyContacted) {
+          console.log(`[WhatsApp] Học viên (${leadInfo.phone}) đã tồn tại trong DB trước đó. Không gửi lại tin chào mừng.`);
+          contactStatus = 'Học viên đã được liên hệ trước đó';
         } else {
-          console.log(`[WhatsApp] Học viên (${leadInfo.phone}) chưa có trong danh bạ HLV. Tiến hành gửi tin nhắn chào mừng...`);
+          console.log(`[WhatsApp] Chuẩn bị gửi tin chào mừng tới JID: ${studentJid}`);
+          console.log(`[WhatsApp] Nội dung: "${welcomeMessage}"`);
           await client.sendMessage(studentJid, welcomeMessage);
-          console.log(`[WhatsApp] Đã gửi tin nhắn chào mừng thành công tới học viên (${leadInfo.phone})`);
+          console.log(`[WhatsApp] ✅ Đã gửi tin nhắn chào mừng thành công tới học viên (${leadInfo.phone})`);
+          contactStatus = 'Đã gửi tin nhắn chào mừng thành công';
         }
-      } catch (contactErr) {
-        console.error('[WhatsApp] Lỗi khi check danh bạ học viên, mặc định gửi tin chào mừng:', contactErr);
-        await client.sendMessage(studentJid, welcomeMessage);
+      } catch (sendErr: any) {
+        console.error(`[WhatsApp] ❌ Lỗi khi gửi tin nhắn tới ${studentJid}:`, sendErr?.message || sendErr);
+        contactStatus = `Lỗi gửi tin: ${sendErr?.message || 'không xác định'}`;
       }
+
+
 
       // Gửi thông báo đến Discord để báo tin cho HLV biết
       const discordNotifyText = `📢 **HỌC VIÊN MỚI TỰ ĐỘNG TỪ WHATSAPP**\n` +
