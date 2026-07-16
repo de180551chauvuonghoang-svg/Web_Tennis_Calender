@@ -97,12 +97,24 @@ export function startWhatsAppClient() {
           const contact = await message.getContact();
           // contact.number là số điện thoại thực (không có @lid hay @c.us)
           senderPhone = contact.number || '';
+          
           if (!senderPhone) {
-            // Fallback: bóc phần số từ JID nếu contact.number rỗng
-            senderPhone = message.from.split('@')[0];
+            // contact.number rỗng thường xảy ra với LID format hoặc contact ẩn danh
+            // Nếu JID dạng @c.us thì bóc số từ JID (vẫn là SĐT thực)
+            // Nếu JID dạng @lid thì KHÔNG dùng LID làm SĐT (sẽ cho kết quả sai)
+            const jid = message.from || '';
+            if (jid.endsWith('@c.us')) {
+              senderPhone = jid.replace('@c.us', '');
+            } else {
+              // LID format → không thể xác định SĐT thực → bỏ qua
+              console.log(`[WhatsApp Debug] JID dạng LID (${jid}), không thể xác định SĐT thực. Bỏ qua.`);
+              return;
+            }
           }
         } catch {
-          senderPhone = message.from.split('@')[0];
+          const jid = message.from || '';
+          senderPhone = jid.endsWith('@c.us') ? jid.replace('@c.us', '') : '';
+          if (!senderPhone) return;
         }
       }
       senderPhone = senderPhone.replace(/\D/g, '').trim();

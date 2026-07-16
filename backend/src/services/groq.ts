@@ -165,7 +165,7 @@ ${text}
 
 Yêu cầu trích xuất các trường:
 1. studentName: Tên của học viên. Nếu không có tên rõ ràng trong tin nhắn, để là chuỗi rỗng "".
-2. studentPhone: Số điện thoại của học viên (nếu có, chỉ lấy phần số, ví dụ "84785669776" hoặc "0795552428"). Nếu không có, để là chuỗi rỗng "".
+2. studentPhone: Số điện thoại của học viên (nếu có trong tin nhắn). GHI LẠI CHỈNH XÁC TẤT CẢ CÁC CHỮ SỐ của số điện thoại, bao gồm cả mã quốc gia. Ví dụ: "84 785669776" →0 "84785669776", "86 138 2430 1352" → "8613824301352", "+852 6041 6779" → "85260416779", "0795552428" → "0795552428". Loại bỏ mọi dấu cách, gạch nối, ngoặc, dấu cộng. Nếu không có số điện thoại nào trong tin nhắn, để là chuỗi rỗng "".
 3. totalSessions: Tổng số buổi học mà học viên đăng kí (số nguyên, ví dụ "3 buổi" = 3, "5 buổi" = 5). Nếu không đề cập, để là 0.
 4. startTime: Thời gian bắt đầu buổi tập (Định dạng chuỗi ISO: YYYY-MM-DDTHH:mm:ss.000Z). Bạn cần phân tích kỹ mốc thời gian HLV ghi (ví dụ: "3h30pm", "4:00 chiều", "sáng mai", "tối thứ 5"). Kết hợp với ngày hiện tại (${currentDateStr}) để quy đổi ra thời gian chính xác ở múi giờ Việt Nam (GMT+7, chuyển sang ISO UTC để lưu vào database).
 5. duration: Thời lượng buổi tập tính bằng phút (dạng số, ví dụ "1h" = 60, "1h30p" = 90, "2h" = 120. Mặc định là 90).
