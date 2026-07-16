@@ -34,8 +34,72 @@ interface EventDetails {
   totalSessions?: number;
 }
 
+function buildDescriptionHtml(details: EventDetails, status: 'pending' | 'in_progress' | 'completed'): string {
+  const progressText = details.currentSession && details.currentSession > 0
+    ? `${details.currentSession}${details.totalSessions && details.totalSessions > 0 ? '/' + details.totalSessions : ''}`
+    : 'Chưa xác định';
+
+  let detailsHtml = `
+<b>👤 Học viên:</b> ${details.studentName}<br>
+<b>📞 Số điện thoại:</b> ${details.phone}<br>
+<b>📘 Trình độ:</b> ${details.level}<br>
+<b>📊 Tiến độ buổi học:</b> Buổi thứ ${progressText}<br>
+<b>👤 Huấn luyện viên phụ trách:</b> ${details.coachName}<br>
+<b>📍 Địa điểm / Sân tập:</b> ${details.location || 'Chưa xác định'}<br>
+<b>📝 Ghi chú lịch dạy:</b> ${details.notes || 'Không có ghi chú'}<br>
+  `.trim();
+
+  if (status === 'completed') {
+    detailsHtml = `<div style="text-decoration: line-through; color: #888888;">${detailsHtml}</div>`;
+  }
+
+  let statusBarHtml = '';
+  if (status === 'pending') {
+    statusBarHtml = `
+      <tr>
+        <td style="width: 33%; padding: 8px 4px; border-bottom: 4px solid #FFD700; color: #FFD700; font-weight: bold; text-align: center;">🟡 ĐANG CHỜ</td>
+        <td style="width: 33%; padding: 8px 4px; border-bottom: 4px solid #e0e0e0; color: #999999; text-align: center;">⚪ ĐANG TẬP</td>
+        <td style="width: 33%; padding: 8px 4px; border-bottom: 4px solid #e0e0e0; color: #999999; text-align: center;">⚪ HOÀN THÀNH</td>
+      </tr>
+    `;
+  } else if (status === 'in_progress') {
+    statusBarHtml = `
+      <tr>
+        <td style="width: 33%; padding: 8px 4px; border-bottom: 4px solid #e0e0e0; color: #999999; text-align: center;">⚪ ĐANG CHỜ</td>
+        <td style="width: 33%; padding: 8px 4px; border-bottom: 4px solid #28A745; color: #28A745; font-weight: bold; text-align: center;">🟢 ĐANG TẬP</td>
+        <td style="width: 33%; padding: 8px 4px; border-bottom: 4px solid #e0e0e0; color: #999999; text-align: center;">⚪ HOÀN THÀNH</td>
+      </tr>
+    `;
+  } else {
+    statusBarHtml = `
+      <tr>
+        <td style="width: 33%; padding: 8px 4px; border-bottom: 4px solid #e0e0e0; color: #999999; text-align: center; text-decoration: line-through;">⚪ ĐANG CHỜ</td>
+        <td style="width: 33%; padding: 8px 4px; border-bottom: 4px solid #e0e0e0; color: #999999; text-align: center; text-decoration: line-through;">⚪ ĐANG TẬP</td>
+        <td style="width: 33%; padding: 8px 4px; border-bottom: 4px solid #888888; color: #888888; font-weight: bold; text-align: center; text-decoration: line-through;">⚫ HOÀN THÀNH</td>
+      </tr>
+    `;
+  }
+
+  return `
+<div style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; padding: 10px; color: #333;">
+  <img src="https://images.unsplash.com/photo-1554068865-24bccd4e34b8?w=600" alt="Tennis" width="100%" style="border-radius: 8px; margin-bottom: 15px;" />
+  
+  <div style="font-size: 14px; line-height: 1.6;">
+    ${detailsHtml}
+  </div>
+  
+  <div style="margin-top: 20px; border-top: 1px solid #eee; padding-top: 15px;">
+    <b>Trạng thái lớp học:</b>
+    <table style="width: 100%; border-collapse: collapse; margin-top: 8px; font-size: 12px;">
+      ${statusBarHtml}
+    </table>
+  </div>
+</div>
+  `.trim();
+}
+
 /**
- * Tạo mới một sự kiện lịch tập tennis trên Google Calendar
+ * Tạo mới một sự kiện lịch tập tennis trên Google Calendar (Mặc định: Đang chờ - Banana Yellow)
  */
 export async function createCalendarEvent(details: EventDetails): Promise<{ eventId: string; htmlLink: string }> {
   try {
@@ -44,21 +108,7 @@ export async function createCalendarEvent(details: EventDetails): Promise<{ even
       : '';
 
     const summary = `🎾 Lịch tập Tennis: ${details.studentName}${sessionSuffix} [HLV: ${details.coachName}]`;
-    const progressText = details.currentSession && details.currentSession > 0
-      ? `${details.currentSession}${details.totalSessions && details.totalSessions > 0 ? '/' + details.totalSessions : ''}`
-      : 'Chưa xác định';
-
-    const description = `
-<b>👤 Học viên:</b> ${details.studentName}<br>
-<b>📞 Số điện thoại:</b> ${details.phone}<br>
-<b>📘 Trình độ:</b> ${details.level}<br>
-<b>📊 Tiến độ buổi học:</b> Buổi thứ ${progressText}<br>
-<b>👤 Huấn luyện viên phụ trách:</b> ${details.coachName}<br>
-<b>📍 Địa điểm / Sân tập:</b> ${details.location || 'Chưa xác định'}<br>
-<b>📝 Ghi chú lịch dạy:</b> ${details.notes || 'Không có ghi chú'}<br>
-<br>
-<img src="https://images.unsplash.com/photo-1554068865-24bccd4e34b8?w=600" alt="Tennis" width="100%" style="border-radius: 8px; margin-top: 10px;" />
-    `.trim();
+    const description = buildDescriptionHtml(details, 'pending');
 
     const response = await calendar.events.insert({
       calendarId: calendarId,
@@ -74,7 +124,7 @@ export async function createCalendarEvent(details: EventDetails): Promise<{ even
           dateTime: details.endTime,
           timeZone: 'Asia/Ho_Chi_Minh',
         },
-        colorId: '5', // Màu vàng/xanh chuối tương tự màu tennis
+        colorId: '5', // Màu vàng (đang chờ)
       },
     });
 
@@ -123,17 +173,49 @@ export async function updateCalendarEventColor(eventId: string, colorId: string)
 }
 
 /**
- * Đánh dấu sự kiện hoàn thành trên Google Calendar bằng cách đổi màu thành màu xám và thêm tiền tố [ĐÃ HOÀN THÀNH] vào tiêu đề
+ * Cập nhật sự kiện sang trạng thái "Đang tập" (Màu xanh Basil - 10)
  */
-export async function markCalendarEventCompleted(eventId: string, studentName: string, coachName: string, sessionText: string): Promise<void> {
+export async function updateCalendarEventToInProgress(eventId: string, details: EventDetails): Promise<void> {
   try {
-    const summary = `✅ [ĐÃ HOÀN THÀNH] Lịch tập Tennis: ${studentName} (${sessionText}) [HLV: ${coachName}]`;
+    const sessionSuffix = details.currentSession && details.currentSession > 0
+      ? ` (Buổi ${details.currentSession}${details.totalSessions && details.totalSessions > 0 ? '/' + details.totalSessions : ''})`
+      : '';
+    const summary = `🎾 [ĐANG TẬP] Lịch tập Tennis: ${details.studentName}${sessionSuffix} [HLV: ${details.coachName}]`;
+    const description = buildDescriptionHtml(details, 'in_progress');
+
     await calendar.events.patch({
       calendarId: calendarId,
       eventId: eventId,
       requestBody: {
         summary: summary,
-        colorId: '8' // Màu xám Graphite chỉ thị đã hoàn thành
+        description: description,
+        colorId: '10' // Màu xanh lá Basil
+      }
+    });
+    console.log(`[Google Calendar] Đã cập nhật sự kiện ${eventId} sang ĐANG TẬP`);
+  } catch (error) {
+    console.error('[Google Calendar] Lỗi khi chuyển sự kiện sang ĐANG TẬP:', error);
+  }
+}
+
+/**
+ * Đánh dấu sự kiện hoàn thành trên Google Calendar (Màu xám Graphite - 8, nội dung gạch ngang)
+ */
+export async function markCalendarEventCompleted(eventId: string, details: EventDetails): Promise<void> {
+  try {
+    const sessionSuffix = details.currentSession && details.currentSession > 0
+      ? ` (Buổi ${details.currentSession}${details.totalSessions && details.totalSessions > 0 ? '/' + details.totalSessions : ''})`
+      : '';
+    const summary = `✅ [ĐÃ HOÀN THÀNH] Lịch tập Tennis: ${details.studentName}${sessionSuffix} [HLV: ${details.coachName}]`;
+    const description = buildDescriptionHtml(details, 'completed');
+
+    await calendar.events.patch({
+      calendarId: calendarId,
+      eventId: eventId,
+      requestBody: {
+        summary: summary,
+        description: description,
+        colorId: '8' // Màu xám Graphite
       }
     });
     console.log(`[Google Calendar] Đã đánh dấu hoàn thành cho sự kiện ${eventId}`);
@@ -141,4 +223,5 @@ export async function markCalendarEventCompleted(eventId: string, studentName: s
     console.error('[Google Calendar] Lỗi khi đánh dấu hoàn thành sự kiện:', error);
   }
 }
+
 

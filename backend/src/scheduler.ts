@@ -1,7 +1,7 @@
 import cron from 'node-cron';
 import { supabase } from './services/supabase';
 import { sendDiscordReminderNotification } from './services/discord';
-import { markCalendarEventCompleted } from './services/calendar';
+import { markCalendarEventCompleted, updateCalendarEventToInProgress } from './services/calendar';
 
 /**
  * Bắt đầu tiến trình chạy ngầm quét lịch học để gửi nhắc nhở và cập nhật trạng thái hoàn thành
@@ -67,6 +67,22 @@ export function startScheduler() {
               totalSessions: lead.total_sessions
             });
 
+            // Cập nhật trạng thái sự kiện trên Google Calendar sang "Đang tập" (Màu xanh Basil và cập nhật thanh trạng thái)
+            if (lesson.google_event_id) {
+              await updateCalendarEventToInProgress(lesson.google_event_id, {
+                studentName: lead.name,
+                phone: lead.phone,
+                level: lead.level,
+                coachName: lesson.coach_name,
+                startTime: lesson.start_time,
+                endTime: lesson.end_time,
+                notes: lead.notes || '',
+                location: courtAddress,
+                currentSession: lead.completed_sessions,
+                totalSessions: lead.total_sessions
+              }).catch(err => console.error('[Scheduler] Lỗi cập nhật Google Calendar sang ĐANG TẬP:', err));
+            }
+
             // Cập nhật trạng thái reminder_sent = true
             await supabase
               .from('lessons')
@@ -129,8 +145,25 @@ export function startScheduler() {
 
               // 1. Đánh dấu hoàn thành trên Google Calendar (đổi màu thành xám và sửa tiêu đề)
               if (lesson.google_event_id) {
-                await markCalendarEventCompleted(lesson.google_event_id, lead.name, lesson.coach_name, sessionText)
-                  .catch(err => console.error('[Scheduler] Lỗi cập nhật Google Calendar:', err));
+                const COURT_ADDRESSES: Record<string, string> = {
+                  'Hào Anh tennis Coffee': 'Tennis & Coffee Hào Anh Hội An, V8JV+W45, Lý Thường Kiệt, Hội An Đông, Đà Nẵng, Vietnam',
+                  'Sân Victoria resort': 'V9W9+8GM Hoi An Dong, Da Nang, Vietnam',
+                };
+                const courtName = (lesson as any).court || 'Chưa xác định';
+                const courtAddress = COURT_ADDRESSES[courtName] || courtName;
+
+                await markCalendarEventCompleted(lesson.google_event_id, {
+                  studentName: lead.name,
+                  phone: lead.phone,
+                  level: lead.level,
+                  coachName: lesson.coach_name,
+                  startTime: lesson.start_time,
+                  endTime: lesson.end_time,
+                  notes: lead.notes || '',
+                  location: courtAddress,
+                  currentSession: newCompleted,
+                  totalSessions: lead.total_sessions
+                }).catch(err => console.error('[Scheduler] Lỗi cập nhật Google Calendar:', err));
               }
 
               // 2. Gửi thông báo hoàn thành đến Discord
