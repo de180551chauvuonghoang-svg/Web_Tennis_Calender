@@ -123,6 +123,27 @@ export function startDiscordBot() {
         lead = newLead;
       }
 
+      // 1.5. Cập nhật ngay thông tin total_sessions và completed_sessions (số buổi hiện tại) nếu có
+      const updateFields: Record<string, any> = { status: 'Scheduled' };
+      if (bookingInfo.totalSessions > 0) {
+        updateFields.total_sessions = bookingInfo.totalSessions;
+        console.log(`[Discord Bot] Cập nhật tổng số buổi học: ${bookingInfo.totalSessions} cho ${lead.name}`);
+      }
+      if (bookingInfo.currentSession > 0) {
+        updateFields.completed_sessions = bookingInfo.currentSession;
+        console.log(`[Discord Bot] Cập nhật số buổi đã học: ${bookingInfo.currentSession} cho ${lead.name}`);
+      }
+      const { data: updatedLead, error: updateError } = await supabase
+        .from('leads')
+        .update(updateFields)
+        .eq('id', lead.id)
+        .select()
+        .single();
+        
+      if (!updateError && updatedLead) {
+        lead = updatedLead;
+      }
+
       // 2. Tính toán startTime và endTime
       const start = new Date(bookingInfo.startTime);
       if (isNaN(start.getTime())) {
@@ -165,7 +186,9 @@ export function startDiscordBot() {
         startTime: startTimeStr,
         endTime: endTimeStr,
         notes: lead.notes,
-        location: courtAddress
+        location: courtAddress,
+        currentSession: lead.completed_sessions,
+        totalSessions: lead.total_sessions
       });
 
       // 6. Lưu buổi học mới vào Supabase
@@ -190,24 +213,8 @@ export function startDiscordBot() {
         return;
       }
 
-      // 7. Cập nhật trạng thái lead sang 'Scheduled', total_sessions và completed_sessions nếu có
-      const updateFields: Record<string, any> = { status: 'Scheduled' };
-      if (bookingInfo.totalSessions > 0) {
-        updateFields.total_sessions = bookingInfo.totalSessions;
-        console.log(`[Discord Bot] Cập nhật tổng số buổi học: ${bookingInfo.totalSessions} cho ${lead.name}`);
-      }
-      if (bookingInfo.currentSession > 0) {
-        updateFields.completed_sessions = bookingInfo.currentSession;
-        console.log(`[Discord Bot] Cập nhật số buổi đã học: ${bookingInfo.currentSession} cho ${lead.name}`);
-      }
-      await supabase
-        .from('leads')
-        .update(updateFields)
-        .eq('id', lead.id);
-      // Refresh lead data
-      const { data: updatedLead } = await supabase.from('leads').select('*').eq('id', lead.id).single();
-      if (updatedLead) Object.assign(lead, updatedLead);
-
+      // 7. Cập nhật trạng thái lead đã được làm ở bước 1.5 nên không cần làm lại ở đây
+      
       // 8. Đồng bộ vào Google Sheets đối soát
       await appendLessonToSheet({
         studentName: lead.name,

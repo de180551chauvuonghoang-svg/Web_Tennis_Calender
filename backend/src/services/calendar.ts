@@ -30,6 +30,8 @@ interface EventDetails {
   endTime: string; // ISOString
   notes?: string;
   location?: string;
+  currentSession?: number;
+  totalSessions?: number;
 }
 
 /**
@@ -37,11 +39,20 @@ interface EventDetails {
  */
 export async function createCalendarEvent(details: EventDetails): Promise<{ eventId: string; htmlLink: string }> {
   try {
-    const summary = `🎾 Lịch tập Tennis: ${details.studentName} [HLV: ${details.coachName}]`;
+    const sessionSuffix = details.currentSession && details.currentSession > 0
+      ? ` (Buổi ${details.currentSession}${details.totalSessions && details.totalSessions > 0 ? '/' + details.totalSessions : ''})`
+      : '';
+
+    const summary = `🎾 Lịch tập Tennis: ${details.studentName}${sessionSuffix} [HLV: ${details.coachName}]`;
+    const progressText = details.currentSession && details.currentSession > 0
+      ? `${details.currentSession}${details.totalSessions && details.totalSessions > 0 ? '/' + details.totalSessions : ''}`
+      : 'Chưa xác định';
+
     const description = `
 👤 Học viên: ${details.studentName}
 📞 Số điện thoại: ${details.phone}
 📘 Trình độ: ${details.level}
+📊 Tiến độ buổi học: Buổi thứ ${progressText}
 👤 Huấn luyện viên phụ trách: ${details.coachName}
 📍 Địa điểm / Sân tập: ${details.location || 'Chưa xác định'}
 📝 Ghi chú lịch dạy: ${details.notes || 'Không có ghi chú'}
