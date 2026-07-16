@@ -18,6 +18,14 @@ const COURT_LOCATIONS: Record<string, { address: string; mapsLink: string }> = {
   },
 };
 
+function getCoachName(authorName: string): string {
+  const lower = authorName.toLowerCase();
+  if (lower === 'hoangcvde180551' || lower.includes('hoangcv') || lower === 'hoang jayce') {
+    return 'hoang jayce';
+  }
+  return authorName;
+}
+
 export function startDiscordBot() {
   const token = process.env.DISCORD_BOT_TOKEN || '';
   const channelId = process.env.DISCORD_BOOKING_CHANNEL_ID || '';
@@ -116,7 +124,7 @@ export function startDiscordBot() {
             phone: firstBooking.studentPhone || 'Không có SĐT (Tạo từ Discord Bot)',
             level: 'Basic',
             status: 'Contacted',
-            notes: `[Tạo tự động từ Discord Bot chat của HLV ${message.author.username}]`
+            notes: `[Tạo tự động từ Discord Bot chat của HLV ${getCoachName(message.author.username)}]`
           }])
           .select()
           .single();
@@ -195,7 +203,7 @@ export function startDiscordBot() {
           studentName: lead.name,
           phone: lead.phone,
           level: lead.level,
-          coachName: message.author.username,
+          coachName: getCoachName(message.author.username),
           startTime: startTimeStr,
           endTime: endTimeStr,
           notes: lead.notes,
@@ -209,7 +217,7 @@ export function startDiscordBot() {
           .from('lessons')
           .insert([{
             lead_id: lead.id,
-            coach_name: message.author.username,
+            coach_name: getCoachName(message.author.username),
             platform: 'Discord',
             start_time: startTimeStr,
             end_time: endTimeStr,
@@ -228,7 +236,7 @@ export function startDiscordBot() {
         await appendLessonToSheet({
           studentName: lead.name,
           phone: lead.phone,
-          coachName: message.author.username,
+          coachName: getCoachName(message.author.username),
           startTime: startTimeStr,
           duration: bookingInfo.duration,
           court: bookingInfo.court,
@@ -319,7 +327,7 @@ export function startDiscordBot() {
 
       const successEmbed = {
         title: '🎾 THÀNH CÔNG — TỰ ĐỘNG ĐẶT LỊCH QUA DISCORD BOT',
-        description: `🔔 Đã lên lịch thành công **${results.length} buổi tập** của học viên **${lead.name}** bởi HLV **${message.author.username}**!`,
+        description: `🔔 Đã lên lịch thành công **${results.length} buổi tập** của học viên **${lead.name}** bởi HLV **${getCoachName(message.author.username)}**!`,
         color: 12779284,
         fields: fields,
         footer: {
