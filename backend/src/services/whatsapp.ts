@@ -14,10 +14,11 @@ const lidToPhoneCache = new Map<string, string>();
 
 function formatWhatsappJid(phone: string): string {
   let clean = phone.replace(/\D/g, '');
+  // Chỉ thêm mã VN nếu là số VN (bắt đầu bằng 0, hoặc có 9-10 chữ số không có mã quốc gia)
   if (clean.startsWith('0')) {
     clean = '84' + clean.slice(1);
-  }
-  if (!clean.startsWith('84') && clean.length === 9) {
+  } else if (!clean.startsWith('84') && !clean.startsWith('852') && !clean.startsWith('86') && !clean.startsWith('1') && clean.length <= 10) {
+    // Số VN không có mã quốc gia và không phải số quốc tế khác
     clean = '84' + clean;
   }
   return `${clean}@c.us`;
@@ -31,30 +32,49 @@ function normalizePhone(p: string): string {
 }
 
 /**
- * Xây dựng cache LID → SĐT bằng cách quét tất cả contacts
- * và tìm contact nào có SĐT khớp với MONITORED_PHONES
+ * Xây dựng cache LID → SĐT bằng cách tra cứu trực tiếp từng số trong MONITORED_PHONES
+ * Dùng getContactById với JID @c.us để WhatsApp tự trả về LID thực sự của họ
  */
 async function buildLidPhoneCache() {
   try {
     const monitoredRaw = process.env.MONITORED_PHONES || '';
     if (!monitoredRaw) return;
-    const monitoredNormalized = monitoredRaw.split(',').map(p => normalizePhone(p.trim()));
+    const monitoredPhones = monitoredRaw.split(',').map(p => normalizePhone(p.trim()));
 
-    const contacts = await client.getContacts();
+    console.log('[WhatsApp] Đang xây dựng LID cache cho các số theo dõi...');
     let found = 0;
-    for (const contact of contacts) {
-      const contactNumber = (contact.number || '').replace(/\D/g, '');
-      if (!contactNumber) continue;
-      const contactNorm = normalizePhone(contactNumber);
-      if (monitoredNormalized.includes(contactNorm)) {
-        // Lưu cả JID @lid lẫn @c.us vào cache
+    for (const phone of monitoredPhones) {
+      const cusJid = phone + '@c.us';
+      try {
+        const contact = await client.getContactById(cusJid);
+        // contact.id._serialized có thể là LID format hoặc @c.us
         const serialized = contact.id._serialized;
-        lidToPhoneCache.set(serialized, contactNorm);
+        // Lưu cả hai dạng vào cache để phủ hết mọi trường hợp
+        lidToPhoneCache.set(serialized, phone);
+        lidToPhoneCache.set(cusJid, phone);
         found++;
-        console.log(`[WhatsApp] Đã map JID "${serialized}" → SĐT theo dõi "${contactNorm}"`);
+        console.log(`[WhatsApp] ✅ Map thành công: "${serialized}" → "${phone}"`);
+      } catch (err) {
+        // Thử scan chat thay thế nếu getContactById thất bại
+        console.warn(`[WhatsApp] ⚠️ Không tìm thấy contact cho ${cusJid}, thử scan chats...`);
+        try {
+          const chats = await client.getChats();
+          for (const chat of chats) {
+            // Kiểm tra nếu số điện thoại trong tên chat hoặc JID khớp
+            const chatJid = chat.id._serialized;
+            const chatUser = chat.id.user || '';
+            if (normalizePhone(chatUser) === phone || chatUser === phone) {
+              lidToPhoneCache.set(chatJid, phone);
+              found++;
+              console.log(`[WhatsApp] ✅ Map từ chat: "${chatJid}" → "${phone}"`);
+              break;
+            }
+          }
+        } catch { /* ignore */ }
       }
     }
-    console.log(`[WhatsApp] Xây dựng LID cache hoàn tất: ${found} số theo dõi được map.`);
+    console.log(`[WhatsApp] LID cache hoàn tất: ${found}/${monitoredPhones.length} số được map.`);
+    console.log('[WhatsApp] Cache hiện tại:', Object.fromEntries(lidToPhoneCache));
   } catch (err) {
     console.error('[WhatsApp] Lỗi khi xây dựng LID cache:', err);
   }
