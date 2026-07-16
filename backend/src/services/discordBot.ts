@@ -239,6 +239,7 @@ export function startDiscordBot() {
         results.push({
           bookingInfo,
           startTimeStr,
+          endTimeStr,
           mapsLink,
           courtAddress
         });
@@ -249,41 +250,71 @@ export function startDiscordBot() {
         return;
       }
 
-      // Gửi phản hồi thành công gom nhóm các buổi tập
+      // Gửi phản hồi thành công gom nhóm các buổi tập hoặc hiển thị chi tiết 1 buổi
       const formatTime = (iso: string) => {
         return new Date(iso).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', hour12: false }) + 
                ' ngày ' + 
                new Date(iso).toLocaleDateString('vi-VN');
       };
 
-      const fields = [
-        { name: '👤 Học viên', value: lead.name, inline: true }
-      ];
+      const fields: any[] = [];
 
-      results.forEach((res, index) => {
-        const { bookingInfo, startTimeStr } = res;
-        const currentVal = bookingInfo.currentSession > 0 ? bookingInfo.currentSession : lead.completed_sessions;
-        const totalVal = bookingInfo.totalSessions > 0 ? bookingInfo.totalSessions : lead.total_sessions;
-        const sessionProgress = totalVal > 0 ? `${currentVal}/${totalVal} buổi` : `Buổi ${currentVal}`;
+      if (results.length === 1) {
+        // Form 1 buổi tập duy nhất: Hiển thị đầy đủ thông tin chi tiết dạng lưới ô thông tin
+        const res = results[0];
+        const { bookingInfo, startTimeStr, endTimeStr, mapsLink, courtAddress } = res;
+        
+        const completedSessions = bookingInfo.currentSession > 0 
+          ? bookingInfo.currentSession 
+          : ((lead as any).completed_sessions || 0);
+          
+        const totalSessions = bookingInfo.totalSessions > 0 
+          ? bookingInfo.totalSessions 
+          : ((lead as any).total_sessions || 0);
 
-        fields.push({
-          name: `📅 Buổi tập ${results.length > 1 ? index + 1 : ''}`,
-          value: `• **Thời gian:** ${formatTime(startTimeStr)}\n• **Tiến độ:** ${sessionProgress}\n• **Sân:** ${bookingInfo.court}`,
-          inline: false
-        });
-      });
+        const sessionsInfo = totalSessions > 0
+          ? `${completedSessions}/${totalSessions} buổi`
+          : (completedSessions > 0 ? `Đã tập ${completedSessions} buổi` : 'Chưa có thông tin');
 
-      if (results.length > 0) {
-        fields.push({
-          name: '🗺️ Bản đồ Google Maps',
-          value: `[Bấm để mở Bản đồ](${results[0].mapsLink})`,
-          inline: true
+        fields.push(
+          { name: '👤 Học viên', value: lead.name, inline: true },
+          { name: '⏰ Thời gian bắt đầu', value: formatTime(startTimeStr), inline: true },
+          { name: '⏳ Thời gian kết thúc', value: formatTime(endTimeStr), inline: true },
+          { name: '⏱️ Thời lượng', value: `${bookingInfo.duration} phút`, inline: true },
+          { name: '📊 Tiến độ buổi học', value: sessionsInfo, inline: true },
+          { name: '📍 Địa điểm / Sân tập', value: bookingInfo.court, inline: true },
+          { name: '🗺️ Bản đồ Google Maps', value: `[Bấm để mở Bản đồ](${mapsLink})`, inline: true },
+          { name: '📋 Địa chỉ đầy đủ (copy)', value: `\`\`\`\n${courtAddress}\n\`\`\``, inline: false }
+        );
+      } else {
+        // Form gộp 2 buổi tập trở lên: Hiển thị danh sách các buổi tập có thời gian bắt đầu và kết thúc riêng biệt
+        fields.push({ name: '👤 Học viên', value: lead.name, inline: false });
+
+        results.forEach((res, index) => {
+          const { bookingInfo, startTimeStr, endTimeStr } = res;
+          const currentVal = bookingInfo.currentSession > 0 ? bookingInfo.currentSession : lead.completed_sessions;
+          const totalVal = bookingInfo.totalSessions > 0 ? bookingInfo.totalSessions : lead.total_sessions;
+          const sessionProgress = totalVal > 0 ? `${currentVal}/${totalVal} buổi` : `Buổi ${currentVal}`;
+
+          fields.push({
+            name: `📅 Buổi tập ${index + 1}`,
+            value: `• **Bắt đầu:** ${formatTime(startTimeStr)}\n• **Kết thúc:** ${formatTime(endTimeStr)}\n• **Tiến độ:** ${sessionProgress}\n• **Sân:** ${bookingInfo.court}`,
+            inline: false
+          });
         });
-        fields.push({
-          name: '📋 Địa chỉ đầy đủ (copy)',
-          value: `\`\`\`\n${results[0].courtAddress}\n\`\`\``,
-          inline: false
-        });
+
+        if (results.length > 0) {
+          fields.push({
+            name: '🗺️ Bản đồ Google Maps',
+            value: `[Bấm để mở Bản đồ](${results[0].mapsLink})`,
+            inline: true
+          });
+          fields.push({
+            name: '📋 Địa chỉ đầy đủ (copy)',
+            value: `\`\`\`\n${results[0].courtAddress}\n\`\`\``,
+            inline: false
+          });
+        }
       }
 
       const successEmbed = {
