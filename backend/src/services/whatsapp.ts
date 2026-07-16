@@ -32,8 +32,8 @@ function normalizePhone(p: string): string {
 }
 
 /**
- * Xây dựng cache LID → SĐT bằng cách tra cứu trực tiếp từng số trong MONITORED_PHONES
- * Dùng getContactById với JID @c.us để WhatsApp tự trả về LID thực sự của họ
+ * Xây dựng cache LID → SĐT bằng cách dùng client.getNumberId()
+ * Đây là API chính xác nhất để resolve SĐT → JID thực (kể cả LID format)
  */
 async function buildLidPhoneCache() {
   try {
@@ -44,37 +44,28 @@ async function buildLidPhoneCache() {
     console.log('[WhatsApp] Đang xây dựng LID cache cho các số theo dõi...');
     let found = 0;
     for (const phone of monitoredPhones) {
-      const cusJid = phone + '@c.us';
       try {
-        const contact = await client.getContactById(cusJid);
-        // contact.id._serialized có thể là LID format hoặc @c.us
-        const serialized = contact.id._serialized;
-        // Lưu cả hai dạng vào cache để phủ hết mọi trường hợp
-        lidToPhoneCache.set(serialized, phone);
-        lidToPhoneCache.set(cusJid, phone);
-        found++;
-        console.log(`[WhatsApp] ✅ Map thành công: "${serialized}" → "${phone}"`);
+        // getNumberId trả về JID thực của số điện thoại này (có thể là @lid hoặc @c.us)
+        const numberId = await (client as any).getNumberId(phone);
+        if (numberId) {
+          const serialized = numberId._serialized;
+          const cusJid = phone + '@c.us';
+          lidToPhoneCache.set(serialized, phone);
+          lidToPhoneCache.set(cusJid, phone); // map cả @c.us format để phủ hết
+          found++;
+          console.log(`[WhatsApp] ✅ Resolved: ${phone} → JID "${serialized}"`);
+        } else {
+          console.warn(`[WhatsApp] ⚠️ getNumberId không tìm thấy JID cho ${phone}`);
+          // Fallback: dùng @c.us trực tiếp
+          lidToPhoneCache.set(phone + '@c.us', phone);
+        }
       } catch (err) {
-        // Thử scan chat thay thế nếu getContactById thất bại
-        console.warn(`[WhatsApp] ⚠️ Không tìm thấy contact cho ${cusJid}, thử scan chats...`);
-        try {
-          const chats = await client.getChats();
-          for (const chat of chats) {
-            // Kiểm tra nếu số điện thoại trong tên chat hoặc JID khớp
-            const chatJid = chat.id._serialized;
-            const chatUser = chat.id.user || '';
-            if (normalizePhone(chatUser) === phone || chatUser === phone) {
-              lidToPhoneCache.set(chatJid, phone);
-              found++;
-              console.log(`[WhatsApp] ✅ Map từ chat: "${chatJid}" → "${phone}"`);
-              break;
-            }
-          }
-        } catch { /* ignore */ }
+        console.warn(`[WhatsApp] ⚠️ Lỗi resolve JID cho ${phone}:`, (err as any)?.message || err);
+        lidToPhoneCache.set(phone + '@c.us', phone);
       }
     }
-    console.log(`[WhatsApp] LID cache hoàn tất: ${found}/${monitoredPhones.length} số được map.`);
-    console.log('[WhatsApp] Cache hiện tại:', Object.fromEntries(lidToPhoneCache));
+    console.log(`[WhatsApp] LID cache hoàn tất: ${found}/${monitoredPhones.length} số được resolve.`);
+    console.log('[WhatsApp] Cache:', Object.fromEntries(lidToPhoneCache));
   } catch (err) {
     console.error('[WhatsApp] Lỗi khi xây dựng LID cache:', err);
   }
@@ -149,8 +140,9 @@ export function startWhatsAppClient() {
       const monitoredPhones = monitoredRaw.split(',').map(p => p.trim().replace(/\D/g, ''));
       
       // Xác định số điện thoại người gửi thực
-      // Ưu tiên: cache LID → contact.number → JID (nếu @c.us)
+      // Ưu tiên: cache LID → contact.number → JID (nếu @c.us) → fallback nếu gửi TO bot
       let senderPhone = '';
+      let usedFallback = false;
       if (message.fromMe) {
         // Tin nhắn gửi đi từ tài khoản đang đăng nhập
         senderPhone = client.info && client.info.wid ? client.info.wid.user : '';
@@ -172,9 +164,20 @@ export function startWhatsAppClient() {
               if (fromJid.endsWith('@c.us')) {
                 senderPhone = fromJid.replace('@c.us', '');
               } else {
-                // LID format và không có trong cache → bỏ qua
-                console.log(`[WhatsApp Debug] JID dạng LID (${fromJid}) không có trong cache, bỏ qua.`);
-                return;
+                // 4. LID format và không có trong cache
+                // Fallback: kiểm tra xem tin nhắn có gửi TRỰC TIẾP ĐẾN SỐ BỌT không
+                // Nếu có, chấp nhận đây là tin từ partner (không thể verify được SĐT người gửi)
+                const botNumber = client.info?.wid?.user || '';
+                const toJid = message.to || '';
+                const isMsgToBot = botNumber && (toJid === `${botNumber}@c.us` || toJid.includes(botNumber));
+                if (isMsgToBot && message.body.trim().length > 0) {
+                  console.log(`[WhatsApp Debug] JID dạng LID (${fromJid}) - tin nhắn gửi đến bot, dùng fallback processing...`);
+                  senderPhone = 'unknown_lid';
+                  usedFallback = true;
+                } else {
+                  console.log(`[WhatsApp Debug] JID dạng LID (${fromJid}) không có trong cache. Bỏ qua.`);
+                  return;
+                }
               }
             } else {
               // Nếu contact.number có giá trị, cập nhật cache để lần sau nhanh hơn
@@ -191,20 +194,25 @@ export function startWhatsAppClient() {
           }
         }
       }
-      senderPhone = senderPhone.replace(/\D/g, '').trim();
+      if (!usedFallback) {
+        senderPhone = senderPhone.replace(/\D/g, '').trim();
+      }
 
       console.log(`[WhatsApp Debug] Số điện thoại người gửi giải mã: "${senderPhone}"`);
 
       // Kiểm tra xem số điện thoại thực có nằm trong danh sách theo dõi không
-      const senderNormalized = normalizePhone(senderPhone);
-      const isMonitored = monitoredPhones.some(mp => {
-        const mpNorm = normalizePhone(mp);
-        return mpNorm === senderNormalized || mp === senderPhone;
-      });
+      // Nếu usedFallback = true thì bỏ qua bước kiểm tra này (tin nhắn đến bot trực tiếp)
+      if (!usedFallback) {
+        const senderNormalized = normalizePhone(senderPhone);
+        const isMonitored = monitoredPhones.some(mp => {
+          const mpNorm = normalizePhone(mp);
+          return mpNorm === senderNormalized || mp === senderPhone;
+        });
 
-      if (!isMonitored) {
-        console.log(`[WhatsApp Debug] Số người gửi "${senderPhone}" (${senderNormalized}) không nằm trong danh sách theo dõi [${monitoredPhones.join(', ')}]. Bỏ qua.`);
-        return;
+        if (!isMonitored) {
+          console.log(`[WhatsApp Debug] Số người gửi "${senderPhone}" (${senderNormalized}) không nằm trong danh sách theo dõi [${monitoredPhones.join(', ')}]. Bỏ qua.`);
+          return;
+        }
       }
 
 
