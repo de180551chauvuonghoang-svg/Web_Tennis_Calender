@@ -224,4 +224,31 @@ export async function markCalendarEventCompleted(eventId: string, details: Event
   }
 }
 
+/**
+ * Cập nhật sự kiện sang trạng thái "Đang chờ" (Màu vàng Banana - 5)
+ */
+export async function updateCalendarEventToPending(eventId: string, details: EventDetails): Promise<void> {
+  try {
+    const sessionSuffix = details.currentSession && details.currentSession > 0
+      ? ` (Buổi ${details.currentSession}${details.totalSessions && details.totalSessions > 0 ? '/' + details.totalSessions : ''})`
+      : '';
+    const summary = `Tennis: ${details.studentName}${sessionSuffix} [HLV: ${details.coachName}]`;
+    const description = buildDescriptionHtml(details, 'pending');
+
+    await calendar.events.patch({
+      calendarId: calendarId,
+      eventId: eventId,
+      requestBody: {
+        summary: summary,
+        description: description,
+        colorId: '5' // Màu vàng Banana
+      }
+    });
+    console.log(`[Google Calendar] Đã cập nhật sự kiện ${eventId} sang ĐANG CHỜ`);
+  } catch (error) {
+    console.error('[Google Calendar] Lỗi khi chuyển sự kiện sang ĐANG CHỜ:', error);
+  }
+}
+
+
 

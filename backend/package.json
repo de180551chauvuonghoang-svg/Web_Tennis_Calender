@@ -4,7 +4,7 @@
   "description": "Backend for Web Tennis Calendar",
   "main": "dist/server.js",
   "scripts": {
-    "build": "tsc",
+    "build": "tsc && npx puppeteer browsers install chrome",
     "start": "node dist/server.js",
     "dev": "ts-node-dev --respawn --transpile-only src/server.ts"
   },
