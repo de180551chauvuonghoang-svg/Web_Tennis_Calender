@@ -219,7 +219,8 @@ export default function App() {
     phone: '',
     level: 'Basic',
     notes: '',
-    total_sessions: ''
+    total_sessions: '',
+    session_hours: ''
   });
   const [isSubmittingLead, setIsSubmittingLead] = useState(false);
   const [clientSuccess, setClientSuccess] = useState(false);
@@ -442,16 +443,26 @@ export default function App() {
     setClientError('');
     setClientSuccess(false);
 
+    // Format notes to include session hours
+    const notesWithHours = clientForm.session_hours 
+      ? `[Thời lượng: ${clientForm.session_hours} giờ/buổi]${clientForm.notes ? ' ' + clientForm.notes : ''}`
+      : clientForm.notes;
+
+    const payload = {
+      ...clientForm,
+      notes: notesWithHours
+    };
+
     try {
       const response = await fetch(`${API_BASE}/leads`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(clientForm)
+        body: JSON.stringify(payload)
       });
 
       if (response.ok) {
         setClientSuccess(true);
-        setClientForm({ name: '', age: '', phone: '', level: 'Basic', notes: '', total_sessions: '' });
+        setClientForm({ name: '', age: '', phone: '', level: 'Basic', notes: '', total_sessions: '', session_hours: '' });
       } else {
         const err = await response.json();
         setClientError(err.error || 'Error submitting form.');
@@ -846,17 +857,36 @@ export default function App() {
                     </div>
                   </div>
 
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                    <label style={{ fontSize: '13px', fontWeight: '600', color: 'var(--text-secondary)' }}>{lang === 'vi' ? 'Số buổi muốn tập luyện' : 'Number of Sessions'}</label>
-                    <input 
-                      type="number" 
-                      min="1"
-                      max="100"
-                      placeholder={lang === 'vi' ? 'Ví dụ: 10 buổi' : 'e.g., 10 sessions'}
-                      value={clientForm.total_sessions}
-                      onChange={e => setClientForm({ ...clientForm, total_sessions: e.target.value })}
-                      style={{ backgroundColor: 'rgba(255,255,255,0.03)', border: '1px solid var(--border-color)', borderRadius: '8px', padding: '12px 15px', color: '#fff', fontSize: '14px', outline: 'none' }}
-                    />
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                      <label style={{ fontSize: '13px', fontWeight: '600', color: 'var(--text-secondary)' }}>
+                        {lang === 'vi' ? 'Số buổi muốn tập luyện' : 'Number of Sessions'}
+                      </label>
+                      <input 
+                        type="number" 
+                        min="1"
+                        max="100"
+                        placeholder={lang === 'vi' ? 'Ví dụ: 10 buổi' : 'e.g., 10 sessions'}
+                        value={clientForm.total_sessions}
+                        onChange={e => setClientForm({ ...clientForm, total_sessions: e.target.value })}
+                        style={{ backgroundColor: 'rgba(255,255,255,0.03)', border: '1px solid var(--border-color)', borderRadius: '8px', padding: '12px 15px', color: '#fff', fontSize: '14px', outline: 'none', width: '100%' }}
+                      />
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                      <label style={{ fontSize: '13px', fontWeight: '600', color: 'var(--text-secondary)' }}>
+                        {lang === 'vi' ? 'Số giờ tập mỗi buổi' : 'Hours per Session'}
+                      </label>
+                      <input 
+                        type="number" 
+                        min="0.5"
+                        max="10"
+                        step="0.5"
+                        placeholder={lang === 'vi' ? 'Ví dụ: 1.5 giờ' : 'e.g., 1.5 hours'}
+                        value={clientForm.session_hours}
+                        onChange={e => setClientForm({ ...clientForm, session_hours: e.target.value })}
+                        style={{ backgroundColor: 'rgba(255,255,255,0.03)', border: '1px solid var(--border-color)', borderRadius: '8px', padding: '12px 15px', color: '#fff', fontSize: '14px', outline: 'none', width: '100%' }}
+                      />
+                    </div>
                   </div>
 
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
@@ -1202,7 +1232,8 @@ export default function App() {
                                 phone: ocrResult.phone,
                                 level: 'Basic',
                                 notes: `Khách hàng trích xuất qua ảnh OCR. Nền tảng: ${ocrResult.platform}`,
-                                total_sessions: ''
+                                total_sessions: '',
+                                session_hours: ''
                               });
                               setView('client');
                             }}
