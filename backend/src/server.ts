@@ -13,7 +13,7 @@ import { performOcr } from './services/groq';
 import { startScheduler } from './scheduler';
 import { startWhatsAppClient } from './services/whatsapp';
 import { startDiscordBot } from './services/discordBot';
-import { sendRegistrationSuccessEmail, sendLessonScheduledEmail } from './services/email';
+import { sendRegistrationSuccessEmail, sendLessonScheduledEmail, sendLessonCancelledEmail } from './services/email';
 
 dotenv.config({ path: path.resolve(__dirname, '../.env') });
 
@@ -254,6 +254,22 @@ app.put('/api/leads/:id', async (req: Request, res: Response) => {
             .from('lessons')
             .delete()
             .eq('id', lesson.id);
+
+          // Gửi email thông báo hủy lịch tập đến học viên
+          if (lead) {
+            const emailMatch = lead.notes?.match(/\[Email:\s*([^\]]+)\]/);
+            const studentEmail = emailMatch ? emailMatch[1].trim() : '';
+
+            if (studentEmail) {
+              sendLessonCancelledEmail({
+                studentName: lead.name,
+                studentEmail: studentEmail,
+                coachName: lesson.coach_name,
+                startTime: lesson.start_time,
+                court: lesson.court || 'Chưa xác định'
+              }).catch(err => console.error('[Lesson Cancelled Email Error]', err));
+            }
+          }
         }
       } catch (calErr) {
         console.error('[Calendar Cancel Fail]', calErr);
@@ -316,6 +332,8 @@ app.post('/api/lessons', async (req: Request, res: Response) => {
       .select('*')
       .eq('lead_id', leadId)
       .maybeSingle();
+
+    const isUpdate = !!existingLesson;
 
     if (existingLesson) {
       if (existingLesson.google_event_id) {
@@ -448,7 +466,8 @@ app.post('/api/lessons', async (req: Request, res: Response) => {
         endTime,
         court: court || 'Chưa xác định',
         mapsLink: mapsLink || undefined,
-        platform: platform || 'Zalo'
+        platform: platform || 'Zalo',
+        isUpdate: isUpdate
       }).catch(err => console.error('[Scheduled Lesson Email Error]', err));
     }
 

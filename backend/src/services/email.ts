@@ -232,10 +232,11 @@ interface LessonScheduledDetails {
   court: string;
   mapsLink?: string;
   platform: string;
+  isUpdate?: boolean;
 }
 
 /**
- * Gửi email thông báo đặt lịch học thành công
+ * Gửi email thông báo đặt/sửa lịch học thành công
  */
 export async function sendLessonScheduledEmail(details: LessonScheduledDetails): Promise<void> {
   if (!emailUser || !emailPass) {
@@ -259,10 +260,22 @@ export async function sendLessonScheduledEmail(details: LessonScheduledDetails):
   const endLocalTime = new Date(details.endTime).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', hour12: false });
   const timeRangeText = `${startFormatted} - ${endLocalTime}`;
 
+  const subjectText = details.isUpdate 
+    ? '🎾 THÔNG BÁO: LỊCH TẬP TENNIS CỦA BẠN ĐÃ ĐƯỢC CẬP NHẬT!' 
+    : '🎾 THÔNG BÁO: LỊCH TẬP TENNIS CỦA BẠN ĐÃ ĐƯỢC THIẾT LẬP THÀNH CÔNG!';
+
+  const headerTitle = details.isUpdate 
+    ? '📅 LỊCH TẬP TENNIS ĐÃ ĐƯỢC CẬP NHẬT' 
+    : '📅 LỊCH TẬP TENNIS ĐÃ ĐƯỢC THIẾT LẬP';
+
+  const welcomeText = details.isUpdate 
+    ? 'Lịch tập luyện tennis của bạn đã được thay đổi/cập nhật thành công. Dưới đây là thông tin chi tiết buổi học mới:' 
+    : 'Lịch tập luyện tennis của bạn đã được thiết lập thành công. Dưới đây là thông tin chi tiết về buổi tập của bạn:';
+
   const mailOptions = {
     from: `"Tennis Academy" <${emailUser}>`,
     to: details.studentEmail,
-    subject: '🎾 THÔNG BÁO: LỊCH TẬP TENNIS CỦA BẠN ĐÃ ĐƯỢC THIẾT LẬP THÀNH CÔNG!',
+    subject: subjectText,
     html: `
       <!DOCTYPE html>
       <html>
@@ -379,12 +392,12 @@ export async function sendLessonScheduledEmail(details: LessonScheduledDetails):
         <div class="container">
           <div class="header">
             <div class="logo">🎾 TENNIS ACADEMY</div>
-            <h1 class="title">📅 LỊCH TẬP TENNIS ĐÃ ĐƯỢC THIẾT LẬP</h1>
+            <h1 class="title">${headerTitle}</h1>
           </div>
           <div class="content">
             <p class="welcome-msg">
               Xin chào <strong>${details.studentName}</strong>,<br><br>
-              Lịch tập luyện tennis của bạn đã được thiết lập thành công. Dưới đây là thông tin chi tiết về buổi tập của bạn:
+              ${welcomeText}
             </p>
             
             <div class="info-card">
@@ -442,5 +455,183 @@ export async function sendLessonScheduledEmail(details: LessonScheduledDetails):
   };
 
   await transporter.sendMail(mailOptions);
-  console.log(`[Email Service] Đã gửi email xác nhận lịch tập đến ${details.studentEmail}`);
+  console.log(`[Email Service] Đã gửi email xác nhận lịch tập (${details.isUpdate ? 'cập nhật' : 'mới'}) đến ${details.studentEmail}`);
+}
+
+interface LessonCancelledDetails {
+  studentName: string;
+  studentEmail: string;
+  coachName: string;
+  startTime: string;
+  court: string;
+}
+
+/**
+ * Gửi email thông báo hủy lịch tập đến học viên
+ */
+export async function sendLessonCancelledEmail(details: LessonCancelledDetails): Promise<void> {
+  if (!emailUser || !emailPass) {
+    console.warn('[Email Service] Bỏ qua gửi email hủy lịch do thiếu cấu hình EMAIL_USER hoặc EMAIL_PASS trong .env.');
+    return;
+  }
+
+  const formatVietnameseDate = (isoString: string) => {
+    const date = new Date(isoString);
+    if (isNaN(date.getTime())) return isoString;
+    const days = ['Chủ Nhật', 'Thứ Hai', 'Thứ Ba', 'Thứ Tư', 'Thứ Năm', 'Thứ Sáu', 'Thứ Bảy'];
+    const dayName = days[date.getDay()];
+    const day = String(date.getDate()).padStart(2, '0');
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const year = date.getFullYear();
+    const time = date.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', hour12: false });
+    return `${dayName}, ngày ${day}/${month}/${year} vào lúc ${time}`;
+  };
+
+  const timeFormatted = formatVietnameseDate(details.startTime);
+
+  const mailOptions = {
+    from: `"Tennis Academy" <${emailUser}>`,
+    to: details.studentEmail,
+    subject: '🔴 THÔNG BÁO: LỊCH TẬP TENNIS CỦA BẠN ĐÃ BỊ HỦY',
+    html: `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <style>
+          body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #0d0f12;
+            color: #e2e8f0;
+            margin: 0;
+            padding: 0;
+          }
+          .container {
+            max-width: 600px;
+            margin: 30px auto;
+            background-color: #1a1f26;
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            border: 1px solid #2d3748;
+          }
+          .header {
+            background-color: #11151c;
+            padding: 30px;
+            text-align: center;
+            border-bottom: 2px solid #ef4444;
+          }
+          .logo {
+            font-size: 24px;
+            font-weight: 800;
+            color: #ef4444;
+            letter-spacing: 1px;
+            margin-bottom: 5px;
+          }
+          .title {
+            font-size: 20px;
+            font-weight: 700;
+            color: #ffffff;
+            margin: 10px 0 0 0;
+          }
+          .content {
+            padding: 30px;
+            line-height: 1.6;
+          }
+          .welcome-msg {
+            font-size: 16px;
+            margin-bottom: 25px;
+            color: #cbd5e1;
+          }
+          .info-card {
+            background-color: rgba(255, 255, 255, 0.02);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 25px;
+          }
+          .info-title {
+            font-size: 16px;
+            font-weight: 700;
+            color: #ef4444;
+            margin-top: 0;
+            margin-bottom: 15px;
+            border-bottom: 1px solid rgba(239, 68, 68, 0.1);
+            padding-bottom: 8px;
+          }
+          .info-item {
+            margin-bottom: 12px;
+            display: flex;
+            justify-content: space-between;
+          }
+          .info-item:last-child {
+            margin-bottom: 0;
+          }
+          .info-label {
+            color: #94a3b8;
+            font-weight: 600;
+          }
+          .info-value {
+            color: #ffffff;
+            font-weight: 700;
+            text-align: right;
+          }
+          .footer {
+            background-color: #11151c;
+            padding: 20px;
+            text-align: center;
+            font-size: 12px;
+            color: #64748b;
+            border-top: 1px solid #2d3748;
+          }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
+            <div class="logo">🔴 TENNIS ACADEMY</div>
+            <h1 class="title">❌ LỊCH TẬP TENNIS ĐÃ BỊ HỦY</h1>
+          </div>
+          <div class="content">
+            <p class="welcome-msg">
+              Xin chào <strong>${details.studentName}</strong>,<br><br>
+              Chúng tôi xin thông báo buổi tập tennis dưới đây của bạn đã bị hủy:
+            </p>
+            
+            <div class="info-card">
+              <h3 class="info-title">❌ Thông tin lịch bị hủy</h3>
+              <div class="info-item">
+                <span class="info-label">👤 Học viên:</span>
+                <span class="info-value">${details.studentName}</span>
+              </div>
+              <div class="info-item">
+                <span class="info-label">🧢 Huấn luyện viên:</span>
+                <span class="info-value">${details.coachName}</span>
+              </div>
+              <div class="info-item">
+                <span class="info-label">⏰ Thời gian:</span>
+                <span class="info-value">${timeFormatted}</span>
+              </div>
+              <div class="info-item">
+                <span class="info-label">📍 Sân tập:</span>
+                <span class="info-value">${details.court}</span>
+              </div>
+            </div>
+
+            <p style="margin-bottom: 0; color: #cbd5e1;">
+              Nếu đây là sự nhầm lẫn hoặc bạn muốn lên lịch tập lại vào khung giờ khác, vui lòng liên hệ trực tiếp với Huấn luyện viên qua Zalo/WhatsApp để được sắp xếp lịch mới. Xin cảm ơn bạn!
+            </p>
+          </div>
+          <div class="footer">
+            Học viện Tennis Academy | Giáo án cá nhân hóa 1-kèm-1<br>
+            Email này được gửi tự động khi HLV xác nhận hủy lịch tập của bạn.
+          </div>
+        </div>
+      </body>
+      </html>
+    `,
+  };
+
+  await transporter.sendMail(mailOptions);
+  console.log(`[Email Service] Đã gửi email thông báo hủy lịch tập đến ${details.studentEmail}`);
 }
