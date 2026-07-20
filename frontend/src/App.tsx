@@ -64,6 +64,8 @@ const TRANSLATIONS = {
     placeholderAge: "25",
     labelPhone: "Số điện thoại (Zalo/WhatsApp) *",
     placeholderPhone: "0901234567",
+    labelEmail: "Gmail / Email",
+    placeholderEmail: "vi_du_email@gmail.com",
     labelLevel: "Trình độ hiện tại",
     levelBasic: "Cơ bản",
     levelIntermediate: "Trung cấp",
@@ -99,6 +101,8 @@ const TRANSLATIONS = {
     placeholderAge: "25",
     labelPhone: "Phone Number (Zalo/WhatsApp) *",
     placeholderPhone: "+84901234567",
+    labelEmail: "Gmail / Email",
+    placeholderEmail: "example@gmail.com",
     labelLevel: "Current Level",
     levelBasic: "Beginner",
     levelIntermediate: "Intermediate",
@@ -217,6 +221,7 @@ export default function App() {
     name: '',
     age: '',
     phone: '',
+    email: '',
     level: 'Basic',
     notes: '',
     total_sessions: '',
@@ -443,14 +448,22 @@ export default function App() {
     setClientError('');
     setClientSuccess(false);
 
-    // Format notes to include session hours
-    const notesWithHours = clientForm.session_hours 
-      ? `[Thời lượng: ${clientForm.session_hours} giờ/buổi]${clientForm.notes ? ' ' + clientForm.notes : ''}`
+    // Format notes to include email and session hours
+    let notesExtra = '';
+    if (clientForm.email) {
+      notesExtra += `[Email: ${clientForm.email}] `;
+    }
+    if (clientForm.session_hours) {
+      notesExtra += `[Thời lượng: ${clientForm.session_hours} giờ/buổi] `;
+    }
+
+    const notesWithHoursAndEmail = notesExtra 
+      ? `${notesExtra.trim()}${clientForm.notes ? ' ' + clientForm.notes : ''}`
       : clientForm.notes;
 
     const payload = {
       ...clientForm,
-      notes: notesWithHours
+      notes: notesWithHoursAndEmail
     };
 
     try {
@@ -462,7 +475,7 @@ export default function App() {
 
       if (response.ok) {
         setClientSuccess(true);
-        setClientForm({ name: '', age: '', phone: '', level: 'Basic', notes: '', total_sessions: '', session_hours: '' });
+        setClientForm({ name: '', age: '', phone: '', email: '', level: 'Basic', notes: '', total_sessions: '', session_hours: '' });
       } else {
         const err = await response.json();
         setClientError(err.error || 'Error submitting form.');
@@ -826,6 +839,17 @@ export default function App() {
                         required
                       />
                     </div>
+                  </div>
+
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    <label style={{ fontSize: '13px', fontWeight: '600', color: 'var(--text-secondary)' }}>{t.labelEmail}</label>
+                    <input 
+                      type="email" 
+                      placeholder={t.placeholderEmail}
+                      value={clientForm.email}
+                      onChange={e => setClientForm({ ...clientForm, email: e.target.value })}
+                      style={{ backgroundColor: 'rgba(255,255,255,0.03)', border: '1px solid var(--border-color)', borderRadius: '8px', padding: '12px 15px', color: '#fff', fontSize: '14px', outline: 'none' }}
+                    />
                   </div>
 
                   {/* Level Selector */}
@@ -1230,6 +1254,7 @@ export default function App() {
                                 name: 'Học viên OCR',
                                 age: '',
                                 phone: ocrResult.phone,
+                                email: '',
                                 level: 'Basic',
                                 notes: `Khách hàng trích xuất qua ảnh OCR. Nền tảng: ${ocrResult.platform}`,
                                 total_sessions: '',
