@@ -4,6 +4,7 @@ import { supabase } from './supabase';
 import { createCalendarEvent, deleteCalendarEvent } from './calendar';
 import { appendLessonToSheet } from './sheets';
 import { sendDiscordBookingNotification } from './discord';
+import { sendLessonScheduledEmail } from './email';
 
 let botClient: Client;
 
@@ -182,6 +183,8 @@ export function startDiscordBot() {
           .eq('lead_id', lead.id)
           .eq('start_time', startTimeStr)
           .maybeSingle();
+
+        const isUpdate = !!existingLesson;
   
         if (existingLesson) {
           console.log(`[Discord Bot] Phát hiện lịch học trùng giờ bắt đầu (${startTimeStr}), tiến hành thay thế...`);
@@ -230,6 +233,24 @@ export function startDiscordBot() {
         if (lessonError || !newLesson) {
           console.error('[Discord Bot] Lỗi khi tạo lesson trong Supabase:', lessonError);
           continue;
+        }
+
+        // Gửi email xác nhận lịch tập cho học viên (nếu học viên có email)
+        const emailMatch = lead.notes?.match(/\[Email:\s*([^\]]+)\]/);
+        const studentEmail = emailMatch ? emailMatch[1].trim() : '';
+
+        if (studentEmail) {
+          sendLessonScheduledEmail({
+            studentName: lead.name,
+            studentEmail: studentEmail,
+            coachName: getCoachName(message.author.username),
+            startTime: startTimeStr,
+            endTime: endTimeStr,
+            court: bookingInfo.court || 'Chưa xác định',
+            mapsLink: mapsLink || undefined,
+            platform: 'Discord',
+            isUpdate: isUpdate
+          }).catch(err => console.error('[Discord Bot Scheduled Email Error]', err));
         }
 
         // Đồng bộ vào Google Sheets đối soát
