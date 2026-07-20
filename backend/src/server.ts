@@ -13,6 +13,7 @@ import { performOcr } from './services/groq';
 import { startScheduler } from './scheduler';
 import { startWhatsAppClient } from './services/whatsapp';
 import { startDiscordBot } from './services/discordBot';
+import { sendRegistrationSuccessEmail } from './services/email';
 
 dotenv.config({ path: path.resolve(__dirname, '../.env') });
 
@@ -53,7 +54,7 @@ const upload = multer({
  */
 app.post('/api/leads', async (req: Request, res: Response) => {
   try {
-    const { name, age, phone, level, notes, total_sessions } = req.body;
+    const { name, age, phone, level, notes, total_sessions, email, session_hours } = req.body;
 
     if (!name || !phone || !level) {
       return res.status(400).json({ error: 'Thiếu thông tin bắt buộc (Tên, Số điện thoại, Trình độ).' });
@@ -91,6 +92,20 @@ app.post('/api/leads', async (req: Request, res: Response) => {
       notes: lead.notes,
       createdAt: new Date(lead.created_at).toLocaleString('vi-VN')
     }).catch(err => console.error('[Google Sheets Bg Error]', err));
+
+    // c. Gửi email đăng ký thành công cho học viên (nếu cung cấp email)
+    if (email) {
+      sendRegistrationSuccessEmail({
+        name: lead.name,
+        age: lead.age,
+        phone: lead.phone,
+        email: email,
+        level: lead.level,
+        notes: notes,
+        total_sessions: total_sessions,
+        session_hours: session_hours
+      }).catch(err => console.error('[Registration Email Error]', err));
+    }
 
     return res.status(201).json(lead);
   } catch (err: any) {
