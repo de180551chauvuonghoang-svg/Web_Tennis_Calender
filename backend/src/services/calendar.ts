@@ -250,5 +250,27 @@ export async function updateCalendarEventToPending(eventId: string, details: Eve
   }
 }
 
+/**
+ * Kiểm tra sự kiện Google Calendar có tồn tại không
+ */
+export async function checkCalendarEventExists(eventId: string): Promise<boolean> {
+  try {
+    const response = await calendar.events.get({
+      calendarId: calendarId,
+      eventId: eventId,
+    });
+    if (response.data.status === 'cancelled') {
+      return false;
+    }
+    return true;
+  } catch (error: any) {
+    if (error.code === 404 || (error.response && error.response.status === 404)) {
+      return false;
+    }
+    console.error(`[Google Calendar] Lỗi khi kiểm tra sự kiện ${eventId}:`, error);
+    return true;
+  }
+}
+
 
 

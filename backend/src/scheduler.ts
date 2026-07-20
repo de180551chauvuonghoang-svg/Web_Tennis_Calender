@@ -1,7 +1,7 @@
 import cron from 'node-cron';
 import { supabase } from './services/supabase';
 import { sendDiscordReminderNotification } from './services/discord';
-import { markCalendarEventCompleted, updateCalendarEventToInProgress } from './services/calendar';
+import { markCalendarEventCompleted, updateCalendarEventToInProgress, checkCalendarEventExists } from './services/calendar';
 
 /**
  * Bắt đầu tiến trình chạy ngầm quét lịch học để gửi nhắc nhở và cập nhật trạng thái hoàn thành
@@ -25,6 +25,16 @@ export function startScheduler() {
 
       if (!reminderErr && reminderLessons && reminderLessons.length > 0) {
         for (const lesson of reminderLessons) {
+          // Kiểm tra xem sự kiện Google Calendar có tồn tại không. Nếu đã bị xóa thì đồng bộ xóa trong database
+          if (lesson.google_event_id) {
+            const exists = await checkCalendarEventExists(lesson.google_event_id);
+            if (!exists) {
+              console.log(`[Scheduler] Phát hiện sự kiện Google Calendar ${lesson.google_event_id} đã bị xóa. Xóa buổi học ID ${lesson.id} khỏi database.`);
+              await supabase.from('lessons').delete().eq('id', lesson.id);
+              continue;
+            }
+          }
+
           const startTime = new Date(lesson.start_time);
 
           // Nếu buổi học bắt đầu trong khoảng từ bây giờ đến 30 phút nữa
@@ -113,6 +123,16 @@ export function startScheduler() {
 
       if (endedLessons && endedLessons.length > 0) {
         for (const lesson of endedLessons) {
+          // Kiểm tra xem sự kiện Google Calendar có tồn tại không. Nếu đã bị xóa thì đồng bộ xóa trong database
+          if (lesson.google_event_id) {
+            const exists = await checkCalendarEventExists(lesson.google_event_id);
+            if (!exists) {
+              console.log(`[Scheduler] Phát hiện sự kiện Google Calendar ${lesson.google_event_id} đã bị xóa. Xóa buổi học ID ${lesson.id} khỏi database.`);
+              await supabase.from('lessons').delete().eq('id', lesson.id);
+              continue;
+            }
+          }
+
           const endTime = new Date(lesson.end_time);
 
           // Nếu thời gian kết thúc buổi học đã trôi qua
