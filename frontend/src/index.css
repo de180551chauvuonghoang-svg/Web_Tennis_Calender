@@ -141,3 +141,152 @@ body {
   border-color: var(--accent-color) !important;
 }
 
+/* ================= RESPONSIVE CLASSES ================= */
+
+/* Header / Navbar */
+.main-header {
+  padding: 15px 30px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.header-logo-section {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.header-actions-section {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.header-tabs {
+  display: flex;
+  gap: 10px;
+  border-left: 1px solid var(--border-color);
+  padding-left: 15px;
+}
+
+/* Client Registration View */
+.hero-heading {
+  font-size: 48px;
+  font-weight: 800;
+  line-height: 1.1;
+  color: #fff;
+}
+
+.feature-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 15px;
+  margin-top: 10px;
+}
+
+.form-card {
+  padding: 40px;
+  border-radius: 24px;
+}
+
+.form-row-grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 15px;
+}
+
+.form-row-grid-1-2 {
+  display: grid;
+  grid-template-columns: 1fr 2fr;
+  gap: 15px;
+}
+
+/* Admin Dashboard layout */
+.admin-layout-grid {
+  display: grid;
+  grid-template-columns: 1.5fr 1fr;
+  gap: 30px;
+  transition: all 0.3s;
+}
+
+/* Student Detail modal grid */
+.detail-row-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 15px;
+}
+
+/* Responsive Breakpoints */
+@media (max-width: 992px) {
+  .admin-layout-grid {
+    grid-template-columns: 1fr !important;
+    gap: 20px !important;
+  }
+}
+
+@media (max-width: 768px) {
+  .main-header {
+    flex-direction: column;
+    gap: 15px;
+    padding: 15px !important;
+    text-align: center;
+  }
+  
+  .header-logo-section {
+    flex-direction: column;
+    text-align: center;
+    gap: 8px !important;
+  }
+  
+  .header-actions-section {
+    flex-direction: column;
+    width: 100%;
+    gap: 12px !important;
+  }
+  
+  .header-tabs {
+    border-left: none !important;
+    padding-left: 0 !important;
+    width: 100%;
+    justify-content: center;
+  }
+
+  .hero-heading {
+    font-size: 32px !important;
+    text-align: center;
+  }
+  
+  .hero-desc {
+    text-align: center;
+    font-size: 14px !important;
+  }
+  
+  .hero-badge {
+    align-self: center !important;
+  }
+  
+  .feature-grid {
+    grid-template-columns: 1fr !important;
+  }
+  
+  .form-card {
+    padding: 20px !important;
+    border-radius: 16px !important;
+  }
+  
+  .form-row-grid-2,
+  .form-row-grid-1-2 {
+    grid-template-columns: 1fr !important;
+    gap: 12px !important;
+  }
+}
+
+@media (max-width: 576px) {
+  .detail-row-grid {
+    grid-template-columns: 1fr !important;
+    gap: 10px !important;
+  }
+}
+
+

@@ -652,8 +652,8 @@ export default function App() {
   return (
     <div style={{ paddingBottom: '60px' }}>
       {/* Header / Navbar */}
-      <header className="glass" style={{ margin: '20px auto', maxWidth: '1200px', width: '95%', padding: '15px 30px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+      <header className="glass main-header" style={{ margin: '20px auto', maxWidth: '1200px', width: '95%' }}>
+        <div className="header-logo-section">
           <div style={{ 
             position: 'relative',
             display: 'flex',
@@ -682,7 +682,7 @@ export default function App() {
           </div>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+        <div className="header-actions-section">
           {/* Language Switcher */}
           <button 
             onClick={() => setLang(lang === 'vi' ? 'en' : 'vi')}
@@ -705,7 +705,7 @@ export default function App() {
           </button>
 
           {/* View toggle tabs */}
-          <div style={{ display: 'flex', gap: '10px', borderLeft: '1px solid var(--border-color)', paddingLeft: '15px' }}>
+          <div className="header-tabs">
             <button 
               onClick={() => setView('client')}
               className="tab-btn"
@@ -755,18 +755,18 @@ export default function App() {
             
             {/* Left intro panel */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-              <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', backgroundColor: 'var(--accent-glow)', color: 'var(--accent-color)', padding: '6px 14px', borderRadius: '30px', width: 'fit-content', fontWeight: '700', fontSize: '13px' }}>
+              <div className="hero-badge" style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', backgroundColor: 'var(--accent-glow)', color: 'var(--accent-color)', padding: '6px 14px', borderRadius: '30px', width: 'fit-content', fontWeight: '700', fontSize: '13px' }}>
                 <Award size={16} /> {t.badgeIntro}
               </div>
-              <h2 style={{ fontSize: '48px', fontWeight: '800', lineHeight: '1.1', color: '#fff' }}>
+              <h2 className="hero-heading">
                 {t.heroHeading} <br />
                 <span style={{ color: 'var(--accent-color)', textShadow: '0 0 20px rgba(194,255,20,0.15)' }}>{t.heroHeadingAccent}</span>
               </h2>
-              <p style={{ color: 'var(--text-secondary)', fontSize: '16px' }}>
+              <p className="hero-desc" style={{ color: 'var(--text-secondary)' }}>
                 {t.heroDesc}
               </p>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', marginTop: '10px' }}>
+              <div className="feature-grid">
                 <div className="glass" style={{ padding: '15px', borderRadius: '12px' }}>
                   <h4 style={{ color: 'var(--accent-color)', fontWeight: '700', fontSize: '20px' }}>{t.feature1Title}</h4>
                   <p style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>{t.feature1Desc}</p>
@@ -779,7 +779,7 @@ export default function App() {
             </div>
 
             {/* Right Form Card */}
-            <div className="glass" style={{ padding: '40px', borderRadius: '24px' }}>
+            <div className="glass form-card">
               <div style={{ marginBottom: '25px' }}>
                 <h3 style={{ fontSize: '24px', fontWeight: '800' }}>{t.formTitle}</h3>
                 <p style={{ color: 'var(--text-secondary)', fontSize: '13px' }}>{t.formSubtitle}</p>
@@ -821,7 +821,7 @@ export default function App() {
                     />
                   </div>
 
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '15px' }}>
+                  <div className="form-row-grid-1-2">
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                       <label style={{ fontSize: '13px', fontWeight: '600', color: 'var(--text-secondary)' }}>{t.labelAge}</label>
                       <input 
@@ -1289,7 +1289,7 @@ export default function App() {
                 </div>
 
                 {/* List and scheduler layout */}
-                <div style={{ display: 'grid', gridTemplateColumns: selectedLead ? '1.5fr 1fr' : '1fr', gap: '30px', transition: 'all 0.3s' }}>
+                <div className="admin-layout-grid" style={{ gridTemplateColumns: selectedLead ? undefined : '1fr' }}>
                   
                   {/* Main table list */}
                   <div className="glass" style={{ padding: '25px', borderRadius: '16px', overflow: 'hidden' }}>
@@ -1758,10 +1758,10 @@ export default function App() {
           <div 
             className="glass"
             style={{
-              padding: '30px',
+              padding: '25px',
               borderRadius: '20px',
-              width: '580px',
-              maxWidth: '100%',
+              width: '100%',
+              maxWidth: '580px',
               maxHeight: '90vh',
               overflowY: 'auto',
               border: '1px solid var(--border-color)',
@@ -1797,7 +1797,7 @@ export default function App() {
             {/* Thông tin thẻ */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
               
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
+              <div className="detail-row-grid">
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                   <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Họ và tên</span>
                   <span style={{ fontSize: '15px', fontWeight: '700', color: '#fff' }}>{viewingLead.name}</span>
@@ -1808,7 +1808,7 @@ export default function App() {
                 </div>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '12px' }}>
+              <div className="detail-row-grid" style={{ borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '12px' }}>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                   <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Số điện thoại</span>
                   <span style={{ fontSize: '15px', fontWeight: '700', color: '#fff', marginBottom: '6px' }}>{viewingLead.phone}</span>
@@ -1882,7 +1882,7 @@ export default function App() {
                 );
               })()}
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '12px' }}>
+              <div className="detail-row-grid" style={{ borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '12px' }}>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                   <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Ngày đăng ký</span>
                   <span style={{ fontSize: '13px', color: 'var(--text-primary)' }}>{formatDate(viewingLead.created_at)}</span>
