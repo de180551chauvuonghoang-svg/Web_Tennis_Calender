@@ -222,3 +222,225 @@ export async function sendRegistrationSuccessEmail(details: RegistrationDetails)
   await transporter.sendMail(mailOptions);
   console.log(`[Email Service] Đã gửi email đăng ký thành công đến ${details.email}`);
 }
+
+interface LessonScheduledDetails {
+  studentName: string;
+  studentEmail: string;
+  coachName: string;
+  startTime: string;
+  endTime: string;
+  court: string;
+  mapsLink?: string;
+  platform: string;
+}
+
+/**
+ * Gửi email thông báo đặt lịch học thành công
+ */
+export async function sendLessonScheduledEmail(details: LessonScheduledDetails): Promise<void> {
+  if (!emailUser || !emailPass) {
+    console.warn('[Email Service] Bỏ qua gửi email đặt lịch do thiếu cấu hình EMAIL_USER hoặc EMAIL_PASS trong .env.');
+    return;
+  }
+
+  const formatVietnameseDate = (isoString: string) => {
+    const date = new Date(isoString);
+    if (isNaN(date.getTime())) return isoString;
+    const days = ['Chủ Nhật', 'Thứ Hai', 'Thứ Ba', 'Thứ Tư', 'Thứ Năm', 'Thứ Sáu', 'Thứ Bảy'];
+    const dayName = days[date.getDay()];
+    const day = String(date.getDate()).padStart(2, '0');
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const year = date.getFullYear();
+    const time = date.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', hour12: false });
+    return `${dayName}, ngày ${day}/${month}/${year} vào lúc ${time}`;
+  };
+
+  const startFormatted = formatVietnameseDate(details.startTime);
+  const endLocalTime = new Date(details.endTime).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', hour12: false });
+  const timeRangeText = `${startFormatted} - ${endLocalTime}`;
+
+  const mailOptions = {
+    from: `"Tennis Academy" <${emailUser}>`,
+    to: details.studentEmail,
+    subject: '🎾 THÔNG BÁO: LỊCH TẬP TENNIS CỦA BẠN ĐÃ ĐƯỢC THIẾT LẬP THÀNH CÔNG!',
+    html: `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <style>
+          body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #0d0f12;
+            color: #e2e8f0;
+            margin: 0;
+            padding: 0;
+          }
+          .container {
+            max-width: 600px;
+            margin: 30px auto;
+            background-color: #1a1f26;
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            border: 1px solid #2d3748;
+          }
+          .header {
+            background-color: #11151c;
+            padding: 30px;
+            text-align: center;
+            border-bottom: 2px solid #c2ff14;
+          }
+          .logo {
+            font-size: 24px;
+            font-weight: 800;
+            color: #c2ff14;
+            letter-spacing: 1px;
+            margin-bottom: 5px;
+          }
+          .title {
+            font-size: 20px;
+            font-weight: 700;
+            color: #ffffff;
+            margin: 10px 0 0 0;
+          }
+          .content {
+            padding: 30px;
+            line-height: 1.6;
+          }
+          .welcome-msg {
+            font-size: 16px;
+            margin-bottom: 25px;
+            color: #cbd5e1;
+          }
+          .info-card {
+            background-color: rgba(255, 255, 255, 0.02);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 25px;
+          }
+          .info-title {
+            font-size: 16px;
+            font-weight: 700;
+            color: #c2ff14;
+            margin-top: 0;
+            margin-bottom: 15px;
+            border-bottom: 1px solid rgba(194, 255, 20, 0.1);
+            padding-bottom: 8px;
+          }
+          .info-item {
+            margin-bottom: 12px;
+            display: flex;
+            justify-content: space-between;
+          }
+          .info-item:last-child {
+            margin-bottom: 0;
+          }
+          .info-label {
+            color: #94a3b8;
+            font-weight: 600;
+          }
+          .info-value {
+            color: #ffffff;
+            font-weight: 700;
+            text-align: right;
+          }
+          .btn-maps {
+            display: inline-block;
+            background-color: #c2ff14;
+            color: #000000;
+            text-decoration: none;
+            padding: 10px 20px;
+            font-weight: 700;
+            border-radius: 8px;
+            margin-top: 10px;
+            text-align: center;
+          }
+          .tips-list {
+            padding-left: 20px;
+            margin-top: 10px;
+            color: #cbd5e1;
+          }
+          .tips-list li {
+            margin-bottom: 8px;
+          }
+          .footer {
+            background-color: #11151c;
+            padding: 20px;
+            text-align: center;
+            font-size: 12px;
+            color: #64748b;
+            border-top: 1px solid #2d3748;
+          }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
+            <div class="logo">🎾 TENNIS ACADEMY</div>
+            <h1 class="title">📅 LỊCH TẬP TENNIS ĐÃ ĐƯỢC THIẾT LẬP</h1>
+          </div>
+          <div class="content">
+            <p class="welcome-msg">
+              Xin chào <strong>${details.studentName}</strong>,<br><br>
+              Lịch tập luyện tennis của bạn đã được thiết lập thành công. Dưới đây là thông tin chi tiết về buổi tập của bạn:
+            </p>
+            
+            <div class="info-card">
+              <h3 class="info-title">🗓️ Chi tiết buổi học</h3>
+              <div class="info-item">
+                <span class="info-label">👤 Học viên:</span>
+                <span class="info-value">${details.studentName}</span>
+              </div>
+              <div class="info-item">
+                <span class="info-label">🧢 Huấn luyện viên:</span>
+                <span class="info-value">${details.coachName}</span>
+              </div>
+              <div class="info-item">
+                <span class="info-label">⏰ Thời gian:</span>
+                <span class="info-value">${timeRangeText}</span>
+              </div>
+              <div class="info-item">
+                <span class="info-label">📍 Sân tập:</span>
+                <span class="info-value">${details.court}</span>
+              </div>
+              <div class="info-item">
+                <span class="info-label">💬 Nhắc lịch qua:</span>
+                <span class="info-value">${details.platform}</span>
+              </div>
+              
+              ${details.mapsLink ? `
+              <div style="text-align: center; margin-top: 15px;">
+                <a href="${details.mapsLink}" target="_blank" class="btn-maps">🗺️ Xem bản đồ đường đi</a>
+              </div>
+              ` : ''}
+            </div>
+
+            <div style="background-color: rgba(194, 255, 20, 0.05); border-left: 4px solid #c2ff14; padding: 15px; border-radius: 4px; margin-bottom: 25px;">
+              <h4 style="margin-top: 0; color: #ffffff; font-weight: 700; font-size: 15px;">💡 Một số lưu ý chuẩn bị:</h4>
+              <ul class="tips-list">
+                <li>Hãy mặc trang phục thể thao thoải mái và giày thể thao chuyên dụng chơi tennis.</li>
+                <li>Nên mang theo nước uống cá nhân hoặc bổ sung nước điện giải trong suốt buổi tập.</li>
+                <li>Vui lòng **có mặt trước 5-10 phút** để khởi động thật kỹ cùng HLV, tránh chấn thương ngoài ý muốn.</li>
+                <li>Nếu cần thay đổi giờ học hoặc có việc bận đột xuất, xin vui lòng liên hệ HLV trước **ít nhất 2 tiếng**.</li>
+              </ul>
+            </div>
+
+            <p style="margin-bottom: 0; color: #cbd5e1;">
+              Chúc bạn có một buổi tập tennis thật nhiều niềm vui và hiệu quả! Hẹn gặp lại bạn trên sân đấu.
+            </p>
+          </div>
+          <div class="footer">
+            Học viện Tennis Academy | Giáo án cá nhân hóa 1-kèm-1<br>
+            Email này được gửi tự động khi HLV xác nhận lịch tập của bạn.
+          </div>
+        </div>
+      </body>
+      </html>
+    `,
+  };
+
+  await transporter.sendMail(mailOptions);
+  console.log(`[Email Service] Đã gửi email xác nhận lịch tập đến ${details.studentEmail}`);
+}

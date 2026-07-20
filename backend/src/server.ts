@@ -13,7 +13,7 @@ import { performOcr } from './services/groq';
 import { startScheduler } from './scheduler';
 import { startWhatsAppClient } from './services/whatsapp';
 import { startDiscordBot } from './services/discordBot';
-import { sendRegistrationSuccessEmail } from './services/email';
+import { sendRegistrationSuccessEmail, sendLessonScheduledEmail } from './services/email';
 
 dotenv.config({ path: path.resolve(__dirname, '../.env') });
 
@@ -434,6 +434,23 @@ app.post('/api/lessons', async (req: Request, res: Response) => {
       mapsLink: mapsLink || 'Không có',
       createdAt: new Date().toISOString()
     }).catch(err => console.error('[Google Sheets Lessons Error]', err));
+
+    // g. Gửi email xác nhận lịch tập cho học viên (nếu học viên có email)
+    const emailMatch = lead.notes?.match(/\[Email:\s*([^\]]+)\]/);
+    const studentEmail = emailMatch ? emailMatch[1].trim() : '';
+
+    if (studentEmail) {
+      sendLessonScheduledEmail({
+        studentName: lead.name,
+        studentEmail: studentEmail,
+        coachName,
+        startTime,
+        endTime,
+        court: court || 'Chưa xác định',
+        mapsLink: mapsLink || undefined,
+        platform: platform || 'Zalo'
+      }).catch(err => console.error('[Scheduled Lesson Email Error]', err));
+    }
 
     return res.status(201).json({ lesson, htmlLink: calendarResult.htmlLink });
   } catch (err: any) {
