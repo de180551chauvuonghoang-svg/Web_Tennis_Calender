@@ -39,6 +39,9 @@ interface Lead {
     platform: string;
     start_time: string;
     end_time: string;
+    court?: string;
+    maps_link?: string;
+    completed?: boolean;
   }[];
 }
 
@@ -255,6 +258,7 @@ export default function App() {
   
   // Scheduling Modal/Section States
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
+  const [viewingLead, setViewingLead] = useState<Lead | null>(null);
   const [schedulerForm, setSchedulerForm] = useState({
     coachName: 'Hoang Jayce',
     platform: 'Zalo',
@@ -1323,7 +1327,22 @@ export default function App() {
 
                               return (
                                 <tr key={lead.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.03)', transition: 'background 0.2s' }}>
-                                  <td style={{ padding: '14px 10px', fontWeight: '600', whiteSpace: 'nowrap', ...rowStyle }}>{lead.name}</td>
+                                  <td 
+                                    onClick={() => setViewingLead(lead)}
+                                    style={{ 
+                                      padding: '14px 10px', 
+                                      fontWeight: '700', 
+                                      whiteSpace: 'nowrap', 
+                                      cursor: 'pointer', 
+                                      color: 'var(--accent-color)',
+                                      textDecoration: 'underline',
+                                      textDecorationColor: 'rgba(194, 255, 20, 0.3)',
+                                      ...rowStyle 
+                                    }}
+                                    title="Click để xem chi tiết học viên"
+                                  >
+                                    {lead.name}
+                                  </td>
                                   <td style={{ padding: '14px 10px', whiteSpace: 'nowrap', ...rowStyle }}>{lead.age || '—'}</td>
                                   <td style={{ padding: '14px 10px', whiteSpace: 'nowrap', ...rowStyle }}>{lead.phone}</td>
                                   <td style={{ padding: '14px 10px', whiteSpace: 'nowrap', opacity: isCompleted ? 0.4 : 1 }}>
@@ -1716,6 +1735,301 @@ export default function App() {
 
           </div>
         )}
+
+      {/* Modal xem chi tiết học viên */}
+      {viewingLead && (
+        <div 
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.75)',
+            backdropFilter: 'blur(8px)',
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            zIndex: 1000,
+            padding: '20px'
+          }}
+          onClick={() => setViewingLead(null)}
+        >
+          <div 
+            className="glass"
+            style={{
+              padding: '30px',
+              borderRadius: '20px',
+              width: '580px',
+              maxWidth: '100%',
+              maxHeight: '90vh',
+              overflowY: 'auto',
+              border: '1px solid var(--border-color)',
+              position: 'relative',
+              boxShadow: '0 20px 50px rgba(0,0,0,0.6)'
+            }}
+            onClick={e => e.stopPropagation()}
+          >
+            {/* Nút đóng */}
+            <button 
+              onClick={() => setViewingLead(null)}
+              style={{
+                position: 'absolute',
+                top: '20px',
+                right: '20px',
+                background: 'none',
+                border: 'none',
+                color: 'var(--text-secondary)',
+                fontSize: '20px',
+                cursor: 'pointer',
+                transition: 'color 0.2s'
+              }}
+              onMouseOver={e => e.currentTarget.style.color = '#fff'}
+              onMouseOut={e => e.currentTarget.style.color = 'var(--text-secondary)'}
+            >
+              ✕
+            </button>
+
+            <h3 style={{ fontSize: '20px', fontWeight: '800', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              👤 Chi tiết Đăng ký Học viên
+            </h3>
+
+            {/* Thông tin thẻ */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+              
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                  <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Họ và tên</span>
+                  <span style={{ fontSize: '15px', fontWeight: '700', color: '#fff' }}>{viewingLead.name}</span>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                  <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Tuổi</span>
+                  <span style={{ fontSize: '15px', fontWeight: '700', color: '#fff' }}>{viewingLead.age || '—'} tuổi</span>
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '12px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                  <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Số điện thoại</span>
+                  <span style={{ fontSize: '15px', fontWeight: '700', color: '#fff', marginBottom: '6px' }}>{viewingLead.phone}</span>
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <a 
+                      href={getZaloLink(viewingLead.phone)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{
+                        padding: '4px 10px',
+                        backgroundColor: '#0068FF',
+                        color: '#fff',
+                        borderRadius: '6px',
+                        fontSize: '11px',
+                        fontWeight: '700',
+                        textDecoration: 'none',
+                        textAlign: 'center'
+                      }}
+                    >
+                      Zalo
+                    </a>
+                    <a 
+                      href={getWhatsAppLink(viewingLead.phone)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{
+                        padding: '4px 10px',
+                        backgroundColor: '#25D366',
+                        color: '#fff',
+                        borderRadius: '6px',
+                        fontSize: '11px',
+                        fontWeight: '700',
+                        textDecoration: 'none',
+                        textAlign: 'center'
+                      }}
+                    >
+                      WhatsApp
+                    </a>
+                  </div>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                  <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Trình độ</span>
+                  <div>
+                    <span style={{
+                      fontSize: '11px',
+                      fontWeight: '700',
+                      padding: '4px 8px',
+                      borderRadius: '4px',
+                      backgroundColor: viewingLead.level === 'Basic' ? 'rgba(194,255,20,0.1)' : viewingLead.level === 'Intermediate' ? 'rgba(59,130,246,0.1)' : 'rgba(236,72,153,0.1)',
+                      color: viewingLead.level === 'Basic' ? 'var(--accent-color)' : viewingLead.level === 'Intermediate' ? '#3b82f6' : '#ec4899',
+                      display: 'inline-block'
+                    }}>
+                      {viewingLead.level === 'Basic' ? 'Cơ bản' : viewingLead.level === 'Intermediate' ? 'Trung cấp' : 'Nâng cao'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Email / Gmail */}
+              {(() => {
+                const emailMatch = viewingLead.notes?.match(/\[Email:\s*([^\]]+)\]/);
+                const emailVal = emailMatch ? emailMatch[1] : '';
+                if (!emailVal) return null;
+                return (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '12px' }}>
+                    <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Gmail / Email</span>
+                    <span style={{ fontSize: '14px', fontWeight: '700', color: '#fff', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      ✉️ {emailVal}
+                    </span>
+                  </div>
+                );
+              })()}
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '12px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                  <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Ngày đăng ký</span>
+                  <span style={{ fontSize: '13px', color: 'var(--text-primary)' }}>{formatDate(viewingLead.created_at)}</span>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                  <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Số buổi đăng ký / đã học</span>
+                  <span style={{ fontSize: '14px', fontWeight: '700', color: '#fff' }}>
+                    {viewingLead.total_sessions || 0} buổi (Đã học: {viewingLead.completed_sessions || 0})
+                  </span>
+                </div>
+              </div>
+
+              {/* Ghi chú */}
+              <div style={{ borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '12px' }}>
+                <span style={{ fontSize: '12px', color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>Ghi chú từ học viên</span>
+                <div style={{ 
+                  backgroundColor: 'rgba(0,0,0,0.2)', 
+                  padding: '12px', 
+                  borderRadius: '8px', 
+                  fontSize: '13px', 
+                  color: '#cbd5e1', 
+                  lineHeight: '1.5',
+                  maxHeight: '100px',
+                  overflowY: 'auto'
+                }}>
+                  {(() => {
+                    let cleanNotes = viewingLead.notes || 'Không có ghi chú nào.';
+                    cleanNotes = cleanNotes.replace(/\[Email:.*?\]\s*/g, '').replace(/\[Thời lượng:.*?\]\s*/g, '');
+                    return cleanNotes;
+                  })()}
+                </div>
+              </div>
+
+              {/* Lịch sử các buổi học đã lên lịch */}
+              <div style={{ borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '12px' }}>
+                <span style={{ fontSize: '12px', color: 'var(--text-secondary)', display: 'block', marginBottom: '8px' }}>📅 Lịch sử các buổi học</span>
+                {!viewingLead.lessons || viewingLead.lessons.length === 0 ? (
+                  <span style={{ fontSize: '13px', color: 'var(--text-secondary)', fontStyle: 'italic' }}>Chưa có buổi học nào được lên lịch.</span>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '150px', overflowY: 'auto' }}>
+                    {viewingLead.lessons.map((lesson: any) => {
+                      const start = new Date(lesson.start_time);
+                      const isCompleted = lesson.completed;
+                      return (
+                        <div 
+                          key={lesson.id} 
+                          style={{ 
+                            display: 'flex', 
+                            justifyContent: 'space-between', 
+                            alignItems: 'center', 
+                            padding: '8px 12px', 
+                            backgroundColor: 'rgba(255,255,255,0.02)', 
+                            borderRadius: '6px', 
+                            border: '1px solid rgba(255,255,255,0.04)' 
+                          }}
+                        >
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                            <span style={{ fontSize: '12px', fontWeight: '600', color: '#fff' }}>
+                              HLV: {lesson.coach_name}
+                            </span>
+                            <span style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>
+                              📍 {lesson.court || 'Chưa rõ'}
+                            </span>
+                          </div>
+                          <div style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                            <span style={{ fontSize: '11px', fontWeight: '600', color: 'var(--accent-color)' }}>
+                              {start.toLocaleDateString('vi-VN')} {start.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', hour12: false })}
+                            </span>
+                            <span style={{
+                              fontSize: '9px',
+                              fontWeight: '700',
+                              padding: '1px 5px',
+                              borderRadius: '3px',
+                              alignSelf: 'flex-end',
+                              backgroundColor: isCompleted ? 'rgba(34,197,94,0.1)' : 'rgba(234,179,8,0.1)',
+                              color: isCompleted ? 'var(--success-color)' : '#eab308'
+                            }}>
+                              {isCompleted ? 'Hoàn thành' : 'Đang chờ'}
+                            </span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
+              {/* Các thao tác hành động */}
+              <div style={{ display: 'flex', gap: '10px', marginTop: '15px', borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '15px' }}>
+                <button
+                  onClick={() => {
+                    setSelectedLead(viewingLead);
+                    setViewingLead(null);
+                  }}
+                  style={{
+                    flex: 1,
+                    backgroundColor: 'var(--accent-color)',
+                    color: '#000',
+                    border: 'none',
+                    borderRadius: '8px',
+                    padding: '10px 15px',
+                    fontWeight: '700',
+                    fontSize: '13px',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '6px',
+                    transition: 'all 0.2s'
+                  }}
+                  onMouseOver={e => e.currentTarget.style.boxShadow = '0 0 12px var(--accent-glow)'}
+                  onMouseOut={e => e.currentTarget.style.boxShadow = 'none'}
+                >
+                  <CalendarIcon size={14} /> Đặt lịch buổi học
+                </button>
+                <button
+                  onClick={() => {
+                    handleDeleteLead(viewingLead.id);
+                    setViewingLead(null);
+                  }}
+                  style={{
+                    backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                    color: 'var(--error-color)',
+                    border: '1px solid var(--error-color)',
+                    borderRadius: '8px',
+                    padding: '10px 15px',
+                    fontWeight: '700',
+                    fontSize: '13px',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '6px',
+                    transition: 'all 0.2s'
+                  }}
+                  onMouseOver={e => e.currentTarget.style.backgroundColor = 'rgba(239, 68, 68, 0.2)'}
+                  onMouseOut={e => e.currentTarget.style.backgroundColor = 'rgba(239, 68, 68, 0.1)'}
+                >
+                  <Trash2 size={14} /> Xóa học viên
+                </button>
+              </div>
+
+            </div>
+
+          </div>
+        </div>
+      )}
 
       </main>
 
