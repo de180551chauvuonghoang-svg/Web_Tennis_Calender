@@ -345,11 +345,10 @@ app.post('/api/lessons', async (req: Request, res: Response) => {
         .eq('id', existingLesson.id);
     }
 
-    // Hardcoded court locations with exact addresses
     const COURT_LOCATIONS: Record<string, { address: string; mapsLink: string }> = {
       'Hào Anh tennis Coffee': {
         address: 'Tennis & Coffee Hào Anh Hội An, V8JV+W45, Lý Thường Kiệt, Hội An Đông, Đà Nẵng, Vietnam',
-        mapsLink: 'https://www.google.com/maps/search/?api=1&query=15.8818113%2C108.3403445',
+        mapsLink: 'https://maps.app.goo.gl/ddPq82m67Yx4KGVE9?g_st=ic',
       },
       'Sân Victoria resort': {
         address: 'V9W9+8GM Hoi An Dong, Da Nang, Vietnam',
