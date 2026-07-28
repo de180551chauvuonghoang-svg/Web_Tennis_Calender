@@ -166,3 +166,44 @@ export async function sendDiscordReminderNotification(details: LessonNotificatio
 
   await sendDiscordWebhook([embed]);
 }
+
+export interface RegistrationNotificationDetails {
+  name: string;
+  phone: string;
+  email?: string;
+  age?: number | null;
+  level: string;
+  total_sessions?: number | null;
+  session_hours?: string | number | null;
+  notes?: string;
+}
+
+/**
+ * Gửi thông báo có học viên mới đăng ký tư vấn thành công qua Website
+ */
+export async function sendDiscordRegistrationNotification(details: RegistrationNotificationDetails): Promise<void> {
+  const embed: DiscordEmbed = {
+    title: '🎉 THÔNG BÁO HỌC VIÊN MỚI ĐĂNG KÝ TƯ VẤN',
+    description: `✨ Học viên **${details.name}** vừa hoàn tất đăng ký tư vấn trên Website!`,
+    color: 3447003, // Màu xanh dương tươi sáng #3498DB
+    fields: [
+      { name: '👤 Họ và tên', value: details.name, inline: true },
+      { name: '📞 Số điện thoại', value: details.phone, inline: true },
+      { name: '📧 Email', value: details.email || 'Không cung cấp', inline: true },
+      { name: '🎂 Tuổi', value: details.age ? `${details.age} tuổi` : 'Chưa nhập', inline: true },
+      { name: '🎯 Trình độ / Nhu cầu', value: details.level || 'Chưa xác định', inline: true },
+      { 
+        name: '📚 Gói đăng ký', 
+        value: details.total_sessions ? `${details.total_sessions} buổi (${details.session_hours || 1}h/buổi)` : 'Chưa chọn', 
+        inline: true 
+      },
+      { name: '📝 Ghi chú / Yêu cầu', value: details.notes || 'Không có ghi chú', inline: false }
+    ],
+    footer: {
+      text: `Web Tennis Calendar - Đăng ký tư vấn trực tuyến • ${formatVietnameseDateTime(new Date().toISOString())}`
+    }
+  };
+
+  await sendDiscordWebhook([embed]);
+}
+

@@ -8,7 +8,7 @@ import fs from 'fs';
 import { supabase } from './services/supabase';
 import { appendLeadToSheet, appendLessonToSheet } from './services/sheets';
 import { createCalendarEvent, deleteCalendarEvent, updateCalendarEventColor } from './services/calendar';
-import { sendDiscordBookingNotification } from './services/discord';
+import { sendDiscordBookingNotification, sendDiscordRegistrationNotification } from './services/discord';
 import { performOcr } from './services/groq';
 import { startScheduler } from './scheduler';
 import { startWhatsAppClient } from './services/whatsapp';
@@ -106,6 +106,18 @@ app.post('/api/leads', async (req: Request, res: Response) => {
         session_hours: session_hours
       }).catch(err => console.error('[Registration Email Error]', err));
     }
+
+    // d. Gửi thông báo về Discord khi có học viên đăng ký tư vấn thành công
+    sendDiscordRegistrationNotification({
+      name: lead.name,
+      phone: lead.phone,
+      email: email || undefined,
+      age: lead.age,
+      level: lead.level,
+      total_sessions: total_sessions ? parseInt(total_sessions) : undefined,
+      session_hours: session_hours,
+      notes: notes
+    }).catch(err => console.error('[Registration Discord Webhook Error]', err));
 
     return res.status(201).json(lead);
   } catch (err: any) {
