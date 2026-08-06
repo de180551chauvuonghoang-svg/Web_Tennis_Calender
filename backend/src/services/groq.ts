@@ -34,7 +34,7 @@ Chỉ trả về JSON, không kèm giải thích hay Markdown tags nào khác b�
     `.trim();
 
     const response = await groq.chat.completions.create({
-      model: 'llama-3.2-11b-vision-preview',
+      model: process.env.GROQ_VISION_MODEL || 'qwen/qwen3.6-27b',
       messages: [
         {
           role: 'user',
