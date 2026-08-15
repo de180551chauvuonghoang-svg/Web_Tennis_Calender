@@ -8,6 +8,20 @@ import { sendLessonScheduledEmail } from './email';
 
 let botClient: Client;
 
+export function getDiscordBotStatus() {
+  const token = (process.env.DISCORD_BOT_TOKEN || '').trim();
+  const channelId = (process.env.DISCORD_BOOKING_CHANNEL_ID || '').trim();
+  return {
+    isConfigured: !!(token && channelId),
+    isReady: botClient ? botClient.isReady() : false,
+    botTag: botClient?.user?.tag || null,
+    configuredChannelId: channelId || null,
+    hasGroqKey: !!process.env.GROQ_API_KEY,
+    hasSupabaseKey: !!process.env.SUPABASE_KEY,
+    hasGoogleCalendar: !!(process.env.GOOGLE_CALENDAR_ID && process.env.GOOGLE_CLIENT_EMAIL && process.env.GOOGLE_PRIVATE_KEY)
+  };
+}
+
 const COURT_LOCATIONS: Record<string, { address: string; mapsLink: string }> = {
   'Hào Anh tennis Coffee': {
     address: 'Tennis & Coffee Hào Anh Hội An, V8JV+W45, Lý Thường Kiệt, Hội An Đông, Đà Nẵng, Vietnam',

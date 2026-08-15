@@ -12,7 +12,7 @@ import { sendDiscordBookingNotification, sendDiscordRegistrationNotification } f
 import { performOcr } from './services/groq';
 import { startScheduler } from './scheduler';
 import { startWhatsAppClient } from './services/whatsapp';
-import { startDiscordBot } from './services/discordBot';
+import { startDiscordBot, getDiscordBotStatus } from './services/discordBot';
 import { sendRegistrationSuccessEmail, sendLessonScheduledEmail, sendLessonCancelledEmail } from './services/email';
 
 dotenv.config({ path: path.resolve(__dirname, '../.env') });
@@ -51,6 +51,10 @@ const upload = multer({
 
 app.get(['/', '/health'], (req: Request, res: Response) => {
   res.status(200).json({ status: 'ok', message: 'Tennis Web Calendar Backend is running' });
+});
+
+app.get('/api/bot-status', (req: Request, res: Response) => {
+  res.status(200).json(getDiscordBotStatus());
 });
 
 /**
