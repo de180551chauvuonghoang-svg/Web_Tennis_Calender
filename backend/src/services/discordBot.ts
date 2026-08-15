@@ -28,8 +28,8 @@ function getCoachName(authorName: string): string {
 }
 
 export function startDiscordBot() {
-  const token = process.env.DISCORD_BOT_TOKEN || '';
-  const channelId = process.env.DISCORD_BOOKING_CHANNEL_ID || '';
+  const token = (process.env.DISCORD_BOT_TOKEN || '').trim();
+  const channelId = (process.env.DISCORD_BOOKING_CHANNEL_ID || '').trim();
 
   if (!token || !channelId) {
     console.error('[Discord Bot] Thiếu DISCORD_BOT_TOKEN hoặc DISCORD_BOOKING_CHANNEL_ID trong file .env');
@@ -55,7 +55,11 @@ export function startDiscordBot() {
     if (message.author.bot) return;
 
     // Chỉ lắng nghe tin nhắn trong kênh đặt lịch cấu hình sẵn
-    if (message.channelId !== channelId) return;
+    if (message.channelId !== channelId) {
+      // Log nếu nhắn ở channel khác để dễ debug
+      console.log(`[Discord Bot Debug] Bỏ qua tin nhắn từ channel ${message.channelId} (Channel cấu hình trong env: ${channelId})`);
+      return;
+    }
 
     const content = message.content.trim();
     console.log(`[Discord Bot] Nhận tin nhắn đặt lịch từ HLV ${message.author.username}: "${content}"`);
