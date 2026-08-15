@@ -54,6 +54,11 @@ app.get(['/', '/health'], (req: Request, res: Response) => {
 });
 
 app.get('/api/bot-status', (req: Request, res: Response) => {
+  if (req.query.force === 'true') {
+    try {
+      startDiscordBot();
+    } catch (e) {}
+  }
   res.status(200).json(getDiscordBotStatus());
 });
 
@@ -559,12 +564,14 @@ app.listen(PORT, () => {
     console.error('[Server] Lỗi khi khởi chạy Discord Bot:', err);
   }
 
-  // Khởi chạy WhatsApp Client
-  try {
-    startWhatsAppClient();
-  } catch (err) {
-    console.error('[Server] Lỗi khi khởi chạy WhatsApp Client:', err);
-  }
+  // Khởi chạy WhatsApp Client sau 5 giây để nhường CPU cho Discord Bot kết nối trước
+  setTimeout(() => {
+    try {
+      startWhatsAppClient();
+    } catch (err) {
+      console.error('[Server] Lỗi khi khởi chạy WhatsApp Client:', err);
+    }
+  }, 5000);
 });
 // Trigger reload: refine contacts check by filtering for actual phonebook contacts
 
