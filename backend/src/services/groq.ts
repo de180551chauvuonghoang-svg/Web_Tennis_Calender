@@ -159,7 +159,7 @@ export async function parseDiscordBooking(text: string, currentDateStr: string):
   try {
     const prompt = `
   Hãy đóng vai trò là trợ lý AI dịch tin nhắn đặt lịch tập tennis của Huấn luyện viên thành dữ liệu JSON chứa danh sách các buổi học cần lên lịch.
-  Ngày hiện tại đang là: ${currentDateStr} (Múi giờ Việt Nam GMT+7).
+  Thời gian hiện tại: ${currentDateStr} (Múi giờ Việt Nam GMT+7).
 
   Hãy phân tích tin nhắn đặt lịch sau. Lưu ý rằng tin nhắn có thể chứa một hoặc nhiều buổi tập khác nhau của học viên (Ví dụ: "Tami 7h AM 18/7 and 19/7 Victoria court buổi 4 and buổi 5" -> Đây là 2 buổi tập riêng biệt: Buổi 4 vào ngày 18/7 lúc 7:00 AM và Buổi 5 vào ngày 19/7 lúc 7:00 AM). Hãy phân tích kỹ để chia nhỏ thành các buổi tập tương ứng trong danh sách:
   """
@@ -172,7 +172,7 @@ export async function parseDiscordBooking(text: string, currentDateStr: string):
   2. studentPhone: Số điện thoại của học viên (nếu có trong tin nhắn). GHI LẠI CHỈNH XÁC TẤT CẢ CÁC CHỮ SỐ. Nếu không có, để là chuỗi rỗng "".
   3. totalSessions: Tổng số buổi học mà học viên đăng kí (số nguyên, ví dụ "3 buổi" = 3). Nếu không đề cập, để là 0.
   4. currentSession: Số thứ tự buổi tập của buổi học cụ thể đó (Ví dụ: đối với buổi tập ngày 18/7 là "buổi 4" thì currentSession là 4. Đối với buổi tập ngày 19/7 là "buổi 5" thì currentSession là 5). Nếu không đề cập, để là 0.
-  5. startTime: Thời gian bắt đầu buổi tập cụ thể đó (Định dạng chuỗi ISO địa phương Việt Nam: YYYY-MM-DDTHH:mm:ss, tuyệt đối KHÔNG có chữ 'Z' hay múi giờ lệch ở cuối). Bạn cần kết hợp với ngày hiện tại (${currentDateStr}) để đưa ra giờ địa phương chính xác nhất ở Việt Nam (Ví dụ: "7h AM ngày 18/7" -> "2026-07-18T07:00:00").
+  5. startTime: Thời gian bắt đầu buổi tập cụ thể đó. BẮT BUỘC dạng chuỗi ISO địa phương Việt Nam: YYYY-MM-DDTHH:mm:ss (Ví dụ: "2026-07-17T06:00:00", BẮT BUỘC có chữ 'T' giữa Ngày và Giờ, tuyệt đối KHÔNG dùng khoảng trắng, KHÔNG có chữ 'Z' hay múi giờ lệch ở cuối). Kết hợp với Thời gian hiện tại (${currentDateStr}) để đưa ra ngày giờ chính xác nhất ở Việt Nam (Ví dụ: "17/7 6am" hoặc "17/7 6h" -> "2026-07-17T06:00:00").
   6. duration: Thời lượng buổi tập tính bằng phút (dạng số, ví dụ "1h" = 60. Mặc định là 60 nếu không nhắc đến hoặc không đề cập thời lượng).
   7. court: Tên sân tập (ánh xạ chính xác sang 1 trong 2 giá trị sau: "Hào Anh tennis Coffee" hoặc "Sân Victoria resort"). Nếu không xác định rõ, mặc định chọn "Hào Anh tennis Coffee".
 
@@ -214,8 +214,12 @@ export async function parseDiscordBooking(text: string, currentDateStr: string):
 
     return sessions.map((s: any) => {
       let startTimeVal = s.startTime || new Date().toISOString();
-      if (startTimeVal && !startTimeVal.includes('+') && !startTimeVal.endsWith('Z')) {
-        startTimeVal += '+07:00';
+      // Chuẩn hóa: Thay thế khoảng trắng giữa Ngày và Giờ bằng chữ 'T'
+      if (typeof startTimeVal === 'string') {
+        startTimeVal = startTimeVal.trim().replace(' ', 'T');
+        if (!startTimeVal.includes('+') && !startTimeVal.endsWith('Z')) {
+          startTimeVal += '+07:00';
+        }
       }
 
       return {

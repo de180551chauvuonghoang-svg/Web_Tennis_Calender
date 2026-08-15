@@ -64,7 +64,12 @@ export function startDiscordBot() {
     const statusMsg = await message.reply('⏳ **Hệ thống AI đang phân tích cú pháp đặt lịch của HLV...**');
 
     try {
-      const currentDateStr = new Date().toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' });
+      const now = new Date();
+      const year = now.getFullYear();
+      const month = String(now.getMonth() + 1).padStart(2, '0');
+      const day = String(now.getDate()).padStart(2, '0');
+      const timeStr = now.toLocaleTimeString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' });
+      const currentDateStr = `${year}-${month}-${day} (${timeStr} ngày ${day}/${month}/${year})`;
       
       // Gọi Groq AI để phân tích tin nhắn tự nhiên thành cấu trúc danh sách
       const bookings = await parseDiscordBooking(content, currentDateStr);
@@ -202,18 +207,24 @@ export function startDiscordBot() {
         const courtAddress = courtInfo.address;
 
         // Tạo lịch trên Google Calendar cho buổi này
-        const calendarResult = await createCalendarEvent({
-          studentName: lead.name,
-          phone: lead.phone,
-          level: lead.level,
-          coachName: getCoachName(message.author.username),
-          startTime: startTimeStr,
-          endTime: endTimeStr,
-          notes: lead.notes,
-          location: courtAddress,
-          currentSession: bookingInfo.currentSession > 0 ? bookingInfo.currentSession : lead.completed_sessions,
-          totalSessions: bookingInfo.totalSessions > 0 ? bookingInfo.totalSessions : lead.total_sessions
-        });
+        let calendarEventId: string | null = null;
+        try {
+          const calendarResult = await createCalendarEvent({
+            studentName: lead.name,
+            phone: lead.phone,
+            level: lead.level,
+            coachName: getCoachName(message.author.username),
+            startTime: startTimeStr,
+            endTime: endTimeStr,
+            notes: lead.notes,
+            location: courtAddress,
+            currentSession: bookingInfo.currentSession > 0 ? bookingInfo.currentSession : lead.completed_sessions,
+            totalSessions: bookingInfo.totalSessions > 0 ? bookingInfo.totalSessions : lead.total_sessions
+          });
+          calendarEventId = calendarResult.eventId;
+        } catch (calErr) {
+          console.error('[Discord Bot] Lỗi khi tạo sự kiện Google Calendar:', calErr);
+        }
 
         // Lưu buổi học mới vào Supabase
         const { data: newLesson, error: lessonError } = await supabase
@@ -224,7 +235,7 @@ export function startDiscordBot() {
             platform: 'Discord',
             start_time: startTimeStr,
             end_time: endTimeStr,
-            google_event_id: calendarResult.eventId,
+            google_event_id: calendarEventId,
             reminder_sent: false
           }])
           .select()

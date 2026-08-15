@@ -4,7 +4,11 @@ import path from 'path';
 
 dotenv.config({ path: path.resolve(__dirname, '../../.env') });
 
-const privateKey = (process.env.GOOGLE_PRIVATE_KEY || '').replace(/\\n/g, '\n');
+let rawPrivateKey = process.env.GOOGLE_PRIVATE_KEY || '';
+if (rawPrivateKey.startsWith('"') && rawPrivateKey.endsWith('"')) {
+  rawPrivateKey = rawPrivateKey.substring(1, rawPrivateKey.length - 1);
+}
+const privateKey = rawPrivateKey.replace(/\\n/g, '\n');
 const clientEmail = process.env.GOOGLE_CLIENT_EMAIL || '';
 const calendarId = process.env.GOOGLE_CALENDAR_ID || '';
 

@@ -49,6 +49,10 @@ const upload = multer({
 
 // ==================== ENDPOINTS ====================
 
+app.get(['/', '/health'], (req: Request, res: Response) => {
+  res.status(200).json({ status: 'ok', message: 'Tennis Web Calendar Backend is running' });
+});
+
 /**
  * 1. Đăng ký học viên mới (Form học viên)
  */
