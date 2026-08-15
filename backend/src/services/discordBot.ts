@@ -6,13 +6,27 @@ import { appendLessonToSheet } from './sheets';
 import { sendDiscordBookingNotification } from './discord';
 import { sendLessonScheduledEmail } from './email';
 
-let botClient: Client;
+let botClient: Client | null = null;
 let botLoginError: string | null = null;
 let isLoggingIn = false;
+let loginStartTime = 0;
 
 export function getDiscordBotStatus() {
   const token = (process.env.DISCORD_BOT_TOKEN || '').trim();
   const channelId = (process.env.DISCORD_BOOKING_CHANNEL_ID || '').trim();
+
+  // Reset login flag if attempt timed out (> 25s)
+  if (isLoggingIn && (Date.now() - loginStartTime > 25000)) {
+    isLoggingIn = false;
+    botLoginError = 'Login attempt timed out. Auto-retrying...';
+  }
+
+  // Trigger login if bot is not ready and not currently logging in
+  if (token && channelId && (!botClient || (!botClient.isReady() && !isLoggingIn))) {
+    console.log('[Discord Bot Status] Bot is not connected. Triggering startDiscordBot()...');
+    startDiscordBot();
+  }
+
   const isReady = botClient ? botClient.isReady() : false;
 
   return {
@@ -56,8 +70,14 @@ export function startDiscordBot() {
     return;
   }
 
+  if (isLoggingIn && (Date.now() - loginStartTime < 25000)) {
+    console.log('[Discord Bot] Login already in progress, skipping duplicate call.');
+    return;
+  }
+
   console.log('[Discord Bot] Đang khởi tạo bot client...');
   isLoggingIn = true;
+  loginStartTime = Date.now();
   botLoginError = null;
 
   botClient = new Client({
@@ -71,7 +91,7 @@ export function startDiscordBot() {
   botClient.on('ready', () => {
     isLoggingIn = false;
     botLoginError = null;
-    console.log(`[Discord Bot] ĐÃ ĐĂNG NHẬP THÀNH CÔNG: ${botClient.user?.tag}! Đang lắng nghe kênh ${channelId}...`);
+    console.log(`[Discord Bot] ĐÃ ĐÃNG NHẬP THÀNH CÔNG: ${botClient?.user?.tag}! Đang lắng nghe kênh ${channelId}...`);
   });
 
   botClient.on('error', (err) => {
