@@ -8,13 +8,17 @@ import { sendLessonScheduledEmail } from './email';
 
 let botClient: Client;
 let botLoginError: string | null = null;
+let isLoggingIn = false;
 
 export function getDiscordBotStatus() {
   const token = (process.env.DISCORD_BOT_TOKEN || '').trim();
   const channelId = (process.env.DISCORD_BOOKING_CHANNEL_ID || '').trim();
+  const isReady = botClient ? botClient.isReady() : false;
+
   return {
     isConfigured: !!(token && channelId),
-    isReady: botClient ? botClient.isReady() : false,
+    isReady: isReady,
+    statusText: isReady ? 'Connected & Ready' : (botLoginError ? `Login Error: ${botLoginError}` : (isLoggingIn ? 'Connecting to Discord Gateway...' : 'Not Started')),
     loginError: botLoginError,
     botTag: botClient?.user?.tag || null,
     configuredChannelId: channelId || null,
@@ -53,6 +57,8 @@ export function startDiscordBot() {
   }
 
   console.log('[Discord Bot] Đang khởi tạo bot client...');
+  isLoggingIn = true;
+  botLoginError = null;
 
   botClient = new Client({
     intents: [
