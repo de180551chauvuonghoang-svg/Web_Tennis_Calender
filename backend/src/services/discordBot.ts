@@ -7,6 +7,7 @@ import { sendDiscordBookingNotification } from './discord';
 import { sendLessonScheduledEmail } from './email';
 
 let botClient: Client;
+let botLoginError: string | null = null;
 
 export function getDiscordBotStatus() {
   const token = (process.env.DISCORD_BOT_TOKEN || '').trim();
@@ -14,6 +15,7 @@ export function getDiscordBotStatus() {
   return {
     isConfigured: !!(token && channelId),
     isReady: botClient ? botClient.isReady() : false,
+    loginError: botLoginError,
     botTag: botClient?.user?.tag || null,
     configuredChannelId: channelId || null,
     hasGroqKey: !!process.env.GROQ_API_KEY,
@@ -398,6 +400,7 @@ export function startDiscordBot() {
   });
 
   botClient.login(token).catch(err => {
+    botLoginError = err?.message || String(err);
     console.error('[Discord Bot] Không thể login bot client:', err);
   });
 }
