@@ -69,7 +69,15 @@ export function startDiscordBot() {
   });
 
   botClient.on('ready', () => {
+    isLoggingIn = false;
+    botLoginError = null;
     console.log(`[Discord Bot] ĐÃ ĐĂNG NHẬP THÀNH CÔNG: ${botClient.user?.tag}! Đang lắng nghe kênh ${channelId}...`);
+  });
+
+  botClient.on('error', (err) => {
+    isLoggingIn = false;
+    botLoginError = err?.message || String(err);
+    console.error('[Discord Bot Client Error]', err);
   });
 
   botClient.on('messageCreate', async (message) => {
