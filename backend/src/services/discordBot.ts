@@ -29,10 +29,10 @@ export function getDiscordBotStatus() {
   const token = cleanEnvVar(process.env.DISCORD_BOT_TOKEN);
   const channelId = cleanEnvVar(process.env.DISCORD_BOOKING_CHANNEL_ID);
 
-  // Reset login flag if attempt timed out (> 15s)
-  if (isLoggingIn && (Date.now() - loginStartTime > 15000)) {
+  // Reset login flag if attempt timed out (> 45s)
+  if (isLoggingIn && (Date.now() - loginStartTime > 45000)) {
     isLoggingIn = false;
-    botLoginError = 'Login attempt timed out after 15s. Will retry...';
+    botLoginError = 'Login attempt timed out after 45s. Will retry...';
   }
 
   // Trigger login if bot is not ready and not currently logging in
@@ -85,7 +85,7 @@ export function startDiscordBot() {
     return;
   }
 
-  if (isLoggingIn && (Date.now() - loginStartTime < 15000)) {
+  if (isLoggingIn && (Date.now() - loginStartTime < 45000)) {
     console.log('[Discord Bot] Login already in progress, skipping duplicate call.');
     return;
   }
@@ -455,16 +455,19 @@ export function startDiscordBot() {
     }
   });
 
+  let timeoutId: any;
   const loginPromise = botClient.login(token);
   const timeoutPromise = new Promise<string>((_, reject) => {
-    setTimeout(() => reject(new Error('Discord login timed out after 12s. Check token format or permissions.')), 12000);
+    timeoutId = setTimeout(() => reject(new Error('Discord login timed out after 45s. Check token format or permissions.')), 45000);
   });
 
   Promise.race([loginPromise, timeoutPromise])
     .then(() => {
+      clearTimeout(timeoutId);
       console.log('[Discord Bot] Client.login() promise resolved successfully.');
     })
     .catch(err => {
+      clearTimeout(timeoutId);
       isLoggingIn = false;
       botLoginError = err?.message || String(err);
       console.error('[Discord Bot] Login error:', err);
