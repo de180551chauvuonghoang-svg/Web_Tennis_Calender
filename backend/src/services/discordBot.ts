@@ -11,14 +11,23 @@ let botLoginError: string | null = null;
 let isLoggingIn = false;
 let loginStartTime = 0;
 
-export function getDiscordBotStatus() {
-  const token = (process.env.DISCORD_BOT_TOKEN || '').trim();
-  const channelId = (process.env.DISCORD_BOOKING_CHANNEL_ID || '').trim();
+function cleanEnvVar(val?: string): string {
+  if (!val) return '';
+  let str = val.trim();
+  if ((str.startsWith('"') && str.endsWith('"')) || (str.startsWith("'") && str.endsWith("'"))) {
+    str = str.substring(1, str.length - 1).trim();
+  }
+  return str.replace(/[\r\n]/g, '').trim();
+}
 
-  // Reset login flag if attempt timed out (> 25s)
-  if (isLoggingIn && (Date.now() - loginStartTime > 25000)) {
+export function getDiscordBotStatus() {
+  const token = cleanEnvVar(process.env.DISCORD_BOT_TOKEN);
+  const channelId = cleanEnvVar(process.env.DISCORD_BOOKING_CHANNEL_ID);
+
+  // Reset login flag if attempt timed out (> 15s)
+  if (isLoggingIn && (Date.now() - loginStartTime > 15000)) {
     isLoggingIn = false;
-    botLoginError = 'Login attempt timed out. Auto-retrying...';
+    botLoginError = 'Login attempt timed out after 15s. Will retry...';
   }
 
   // Trigger login if bot is not ready and not currently logging in
@@ -62,20 +71,21 @@ function getCoachName(authorName: string): string {
 }
 
 export function startDiscordBot() {
-  const token = (process.env.DISCORD_BOT_TOKEN || '').trim();
-  const channelId = (process.env.DISCORD_BOOKING_CHANNEL_ID || '').trim();
+  const token = cleanEnvVar(process.env.DISCORD_BOT_TOKEN);
+  const channelId = cleanEnvVar(process.env.DISCORD_BOOKING_CHANNEL_ID);
 
   if (!token || !channelId) {
     console.error('[Discord Bot] Thiếu DISCORD_BOT_TOKEN hoặc DISCORD_BOOKING_CHANNEL_ID trong file .env');
+    botLoginError = 'Thiếu DISCORD_BOT_TOKEN hoặc DISCORD_BOOKING_CHANNEL_ID trong file .env';
     return;
   }
 
-  if (isLoggingIn && (Date.now() - loginStartTime < 25000)) {
+  if (isLoggingIn && (Date.now() - loginStartTime < 15000)) {
     console.log('[Discord Bot] Login already in progress, skipping duplicate call.');
     return;
   }
 
-  console.log('[Discord Bot] Đang khởi tạo bot client...');
+  console.log(`[Discord Bot] Đang khởi tạo bot client (Token length: ${token.length})...`);
   isLoggingIn = true;
   loginStartTime = Date.now();
   botLoginError = null;
@@ -433,8 +443,18 @@ export function startDiscordBot() {
     }
   });
 
-  botClient.login(token).catch(err => {
-    botLoginError = err?.message || String(err);
-    console.error('[Discord Bot] Không thể login bot client:', err);
+  const loginPromise = botClient.login(token);
+  const timeoutPromise = new Promise<string>((_, reject) => {
+    setTimeout(() => reject(new Error('Discord login timed out after 12s. Check token format or permissions.')), 12000);
   });
+
+  Promise.race([loginPromise, timeoutPromise])
+    .then(() => {
+      console.log('[Discord Bot] Client.login() promise resolved successfully.');
+    })
+    .catch(err => {
+      isLoggingIn = false;
+      botLoginError = err?.message || String(err);
+      console.error('[Discord Bot] Login error:', err);
+    });
 }
