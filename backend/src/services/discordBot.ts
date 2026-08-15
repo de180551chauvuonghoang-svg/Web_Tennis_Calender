@@ -1,3 +1,8 @@
+import dns from 'dns';
+try {
+  dns.setDefaultResultOrder('ipv4first');
+} catch (e) {}
+
 import { Client, GatewayIntentBits } from 'discord.js';
 import { parseDiscordBooking } from './groq';
 import { supabase } from './supabase';
@@ -83,6 +88,13 @@ export function startDiscordBot() {
   if (isLoggingIn && (Date.now() - loginStartTime < 15000)) {
     console.log('[Discord Bot] Login already in progress, skipping duplicate call.');
     return;
+  }
+
+  // Destroy previous client instance if any
+  if (botClient) {
+    try {
+      botClient.destroy();
+    } catch (e) {}
   }
 
   console.log(`[Discord Bot] Đang khởi tạo bot client (Token length: ${token.length})...`);
