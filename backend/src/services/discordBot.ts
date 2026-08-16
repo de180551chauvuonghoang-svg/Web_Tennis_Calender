@@ -112,17 +112,23 @@ export function startDiscordBot() {
       GatewayIntentBits.GuildMessages,
       GatewayIntentBits.MessageContent,
     ],
+    ws: {
+      large_threshold: 50,
+    }
   });
 
   botClient.on('debug', (info) => {
     console.log(`[Discord Bot Debug] ${info}`);
   });
 
-  botClient.on('ready', () => {
+  const onReady = () => {
     isLoggingIn = false;
     botLoginError = null;
     console.log(`[Discord Bot] ĐÃ ĐĂNG NHẬP THÀNH CÔNG: ${botClient?.user?.tag}! Đang lắng nghe kênh ${channelId}...`);
-  });
+  };
+
+  botClient.on('ready', onReady);
+  botClient.on('clientReady' as any, onReady);
 
   botClient.on('error', (err) => {
     isLoggingIn = false;
