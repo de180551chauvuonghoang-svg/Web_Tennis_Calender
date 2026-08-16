@@ -136,12 +136,13 @@ export function startDiscordBot() {
   });
 
   botClient.on('messageCreate', async (message) => {
+    console.log(`[Discord Message Received] Author: ${message.author.username} (${message.author.bot ? 'BOT' : 'USER'}), Channel ID: ${message.channelId}, Content: "${message.content}"`);
+
     // Bỏ qua tin nhắn từ Bot
     if (message.author.bot) return;
 
     // Chỉ lắng nghe tin nhắn trong kênh đặt lịch cấu hình sẵn
     if (message.channelId !== channelId) {
-      // Log nếu nhắn ở channel khác để dễ debug
       console.log(`[Discord Bot Debug] Bỏ qua tin nhắn từ channel ${message.channelId} (Channel cấu hình trong env: ${channelId})`);
       return;
     }
