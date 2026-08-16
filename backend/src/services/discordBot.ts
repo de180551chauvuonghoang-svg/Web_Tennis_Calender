@@ -34,38 +34,11 @@ function cleanEnvVar(val?: string): string {
   return str.replace(/[\r\n]/g, '').trim();
 }
 
-async function verifyDiscordToken(token: string): Promise<{ valid: boolean; botName?: string; error?: string }> {
-  try {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 8000);
-
-    const res = await fetch('https://discord.com/api/v10/users/@me', {
-      headers: {
-        Authorization: `Bot ${token}`,
-      },
-      signal: controller.signal
-    });
-    clearTimeout(timeout);
-
-    if (res.status === 200) {
-      const data: any = await res.json();
-      return { valid: true, botName: `${data.username}#${data.discriminator || '0'}` };
-    } else if (res.status === 401) {
-      return { valid: false, error: 'Token không hợp lệ (401 Unauthorized từ Discord API). Vui lòng Reset Token trong Discord Developer Portal.' };
-    } else {
-      return { valid: false, error: `Discord API trả về HTTP Status ${res.status}: ${res.statusText}` };
-    }
-  } catch (err: any) {
-    if (err.name === 'AbortError') {
-      return { valid: false, error: 'Kết nối tới Discord REST API bị quá giờ (Timeout > 8s).' };
-    }
-    return { valid: false, error: `Không thể kết nối tới Discord API: ${err.message || String(err)}` };
-  }
-}
-
 export function getDiscordBotStatus() {
   const token = cleanEnvVar(process.env.DISCORD_BOT_TOKEN);
   const channelId = cleanEnvVar(process.env.DISCORD_BOOKING_CHANNEL_ID);
+
+  const isReady = botClient ? botClient.isReady() : false;
 
   // Reset login flag if attempt timed out (> 45s)
   if (isLoggingIn && (Date.now() - loginStartTime > 45000)) {
@@ -74,12 +47,10 @@ export function getDiscordBotStatus() {
   }
 
   // Trigger login if bot is not ready and not currently logging in
-  if (token && channelId && (!botClient || (!botClient.isReady() && !isLoggingIn))) {
+  if (token && channelId && !isReady && !isLoggingIn) {
     console.log('[Discord Bot Status] Bot is not connected. Triggering startDiscordBot()...');
-    startDiscordBot().catch(() => {});
+    startDiscordBot();
   }
-
-  const isReady = botClient ? botClient.isReady() : false;
 
   return {
     isConfigured: !!(token && channelId),
@@ -113,7 +84,7 @@ function getCoachName(authorName: string): string {
   return authorName;
 }
 
-export async function startDiscordBot() {
+export function startDiscordBot() {
   const token = cleanEnvVar(process.env.DISCORD_BOT_TOKEN);
   const channelId = cleanEnvVar(process.env.DISCORD_BOOKING_CHANNEL_ID);
 
@@ -123,25 +94,14 @@ export async function startDiscordBot() {
     return;
   }
 
+  if (botClient?.isReady()) {
+    return;
+  }
+
   if (isLoggingIn && (Date.now() - loginStartTime < 45000)) {
     console.log('[Discord Bot] Login already in progress, skipping duplicate call.');
     return;
   }
-
-  isLoggingIn = true;
-  loginStartTime = Date.now();
-  botLoginError = null;
-
-  console.log(`[Discord Bot] Đang kiểm tra token với Discord REST API (Token length: ${token.length})...`);
-  const check = await verifyDiscordToken(token);
-  if (!check.valid) {
-    isLoggingIn = false;
-    botLoginError = check.error || 'Xác thực Token thất bại';
-    console.error(`[Discord Bot] Lỗi xác thực Token: ${check.error}`);
-    return;
-  }
-
-  console.log(`[Discord Bot] REST API xác thực thành công cho Bot: ${check.botName}. Tiến hành mở kết nối WebSocket Gateway...`);
 
   // Destroy previous client instance if any
   if (botClient) {
@@ -149,6 +109,11 @@ export async function startDiscordBot() {
       botClient.destroy();
     } catch (e) {}
   }
+
+  console.log(`[Discord Bot] Đang khởi tạo bot client (Token length: ${token.length})...`);
+  isLoggingIn = true;
+  loginStartTime = Date.now();
+  botLoginError = null;
 
   botClient = new Client({
     intents: [
