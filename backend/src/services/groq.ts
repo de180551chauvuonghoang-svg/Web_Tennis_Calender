@@ -168,7 +168,7 @@ export async function parseDiscordBooking(text: string, currentDateStr: string):
 
   Yêu cầu trích xuất danh sách các buổi tập:
   Mỗi phần tử trong danh sách cần có các trường sau:
-  1. studentName: Tên của học viên. Nếu không có tên rõ ràng trong tin nhắn, để là chuỗi rỗng "".
+  1. studentName: Tên của học viên. BẤT KỲ từ ngữ nào trong tin nhắn không phải là Ngày, Giờ, hay Sân tập thì HÃY COI ĐÓ LÀ TÊN HỌC VIÊN (Ví dụ: "18/7 6am khachviet4" -> studentName: "khachviet4", "Tami 7h AM 18/8 Victoria court" -> studentName: "Tami"). Nếu hoàn toàn không có từ ngữ nào chỉ tên, mặc định là "Học viên Discord".
   2. studentPhone: Số điện thoại của học viên (nếu có trong tin nhắn). GHI LẠI CHỈNH XÁC TẤT CẢ CÁC CHỮ SỐ. Nếu không có, để là chuỗi rỗng "".
   3. totalSessions: Tổng số buổi học mà học viên đăng kí (số nguyên, ví dụ "3 buổi" = 3). Nếu không đề cập, để là 0.
   4. currentSession: Số thứ tự buổi tập của buổi học cụ thể đó (Ví dụ: đối với buổi tập ngày 18/7 là "buổi 4" thì currentSession là 4. Đối với buổi tập ngày 19/7 là "buổi 5" thì currentSession là 5). Nếu không đề cập, để là 0.

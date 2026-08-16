@@ -171,11 +171,13 @@ export function startDiscordBot() {
         return;
       }
 
+      bookings.forEach(b => {
+        if (!b.studentName || !b.studentName.trim()) {
+          b.studentName = 'Học viên Discord';
+        }
+      });
+
       const firstBooking = bookings[0];
-      if (!firstBooking.studentName && !firstBooking.studentPhone) {
-        await statusMsg.edit('❌ **AI không thể trích xuất được tên hoặc số điện thoại học viên từ tin nhắn. Vui lòng thử lại với tên hoặc số điện thoại rõ ràng hơn!**');
-        return;
-      }
 
       let lead = null;
 
