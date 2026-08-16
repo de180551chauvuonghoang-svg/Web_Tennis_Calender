@@ -139,10 +139,14 @@ export function startDiscordBot() {
     ],
   });
 
+  botClient.on('debug', (info) => {
+    console.log(`[Discord Bot Debug] ${info}`);
+  });
+
   botClient.on('ready', () => {
     isLoggingIn = false;
     botLoginError = null;
-    console.log(`[Discord Bot] ĐÃ ĐÃNG NHẬP THÀNH CÔNG: ${botClient?.user?.tag}! Đang lắng nghe kênh ${channelId}...`);
+    console.log(`[Discord Bot] ĐÃ ĐĂNG NHẬP THÀNH CÔNG: ${botClient?.user?.tag}! Đang lắng nghe kênh ${channelId}...`);
   });
 
   botClient.on('error', (err) => {
@@ -485,6 +489,7 @@ export function startDiscordBot() {
     }
   });
 
+  console.log(`[Discord Bot] Calling botClient.login(token) with token length ${token.length}...`);
   botClient.login(token)
     .then(() => {
       isLoggingIn = false;
