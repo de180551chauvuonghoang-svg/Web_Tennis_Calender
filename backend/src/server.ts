@@ -3,6 +3,22 @@ try {
   dns.setDefaultResultOrder('ipv4first');
 } catch (e) {}
 
+// Patch dns.lookup to force IPv4 only across net, tls, ws, and http modules
+const origLookupServer = dns.lookup;
+(dns as any).lookup = function (hostname: any, options: any, callback: any) {
+  if (typeof options === 'function') {
+    callback = options;
+    options = { family: 4 };
+  } else if (typeof options === 'number') {
+    options = { family: 4 };
+  } else if (options && typeof options === 'object') {
+    options = { ...options, family: 4 };
+  } else {
+    options = { family: 4 };
+  }
+  return (origLookupServer as any)(hostname, options, callback);
+};
+
 import express, { Request, Response } from 'express';
 import cors from 'cors';
 import multer from 'multer';
