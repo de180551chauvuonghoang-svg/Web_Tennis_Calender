@@ -569,14 +569,18 @@ app.listen(PORT, () => {
     console.error('[Server] Lỗi khi khởi chạy Discord Bot:', err);
   }
 
-  // Khởi chạy WhatsApp Client sau 5 giây để nhường CPU cho Discord Bot kết nối trước
-  setTimeout(() => {
-    try {
-      startWhatsAppClient();
-    } catch (err) {
-      console.error('[Server] Lỗi khi khởi chạy WhatsApp Client:', err);
-    }
-  }, 5000);
+  // Khởi chạy WhatsApp Client chỉ khi được bật cấu hình (tránh ngốn 100% CPU/RAM của server Render làm kẹt Discord Bot)
+  if (process.env.ENABLE_WHATSAPP === 'true') {
+    setTimeout(() => {
+      try {
+        startWhatsAppClient();
+      } catch (err) {
+        console.error('[Server] Lỗi khi khởi chạy WhatsApp Client:', err);
+      }
+    }, 5000);
+  } else {
+    console.log('[Server] WhatsApp Client được tắt mặc định trên Production để tối ưu CPU (Đặt ENABLE_WHATSAPP=true trên Render nếu muốn bật).');
+  }
 });
 // Trigger reload: refine contacts check by filtering for actual phonebook contacts
 

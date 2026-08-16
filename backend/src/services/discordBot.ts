@@ -468,19 +468,13 @@ export function startDiscordBot() {
     }
   });
 
-  let timeoutId: any;
-  const loginPromise = botClient.login(token);
-  const timeoutPromise = new Promise<string>((_, reject) => {
-    timeoutId = setTimeout(() => reject(new Error('Discord login timed out after 45s. Check token format or permissions.')), 45000);
-  });
-
-  Promise.race([loginPromise, timeoutPromise])
+  botClient.login(token)
     .then(() => {
-      clearTimeout(timeoutId);
-      console.log('[Discord Bot] Client.login() promise resolved successfully.');
+      isLoggingIn = false;
+      botLoginError = null;
+      console.log('[Discord Bot] Client.login() resolved successfully.');
     })
     .catch(err => {
-      clearTimeout(timeoutId);
       isLoggingIn = false;
       botLoginError = err?.message || String(err);
       console.error('[Discord Bot] Login error:', err);
