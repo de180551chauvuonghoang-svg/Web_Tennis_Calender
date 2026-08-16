@@ -3,31 +3,6 @@ try {
   dns.setDefaultResultOrder('ipv4first');
 } catch (e) {}
 
-// Patch dns.lookup to force IPv4 only across ws, net, tls, and undici modules
-const origLookupBot = dns.lookup;
-(dns as any).lookup = function (hostname: any, options: any, callback: any) {
-  if (typeof options === 'function') {
-    callback = options;
-    options = { family: 4 };
-  } else if (typeof options === 'number') {
-    options = { family: 4 };
-  } else if (options && typeof options === 'object') {
-    options = { ...options, family: 4 };
-  } else {
-    options = { family: 4 };
-  }
-  return (origLookupBot as any)(hostname, options, callback);
-};
-
-try {
-  const { setGlobalDispatcher, Agent } = require('undici');
-  setGlobalDispatcher(new Agent({
-    connect: {
-      lookup: (hostname: string, options: any, cb: any) => dns.lookup(hostname, { ...options, family: 4 }, cb)
-    }
-  }));
-} catch (e) {}
-
 import { Client, GatewayIntentBits } from 'discord.js';
 import { parseDiscordBooking } from './groq';
 import { supabase } from './supabase';
